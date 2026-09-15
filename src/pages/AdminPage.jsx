@@ -761,6 +761,7 @@ export default function AdminPage({ onLogout }) {
     const updated = { ...localAccessSettings, registrationMode: mode };
     setLocalAccessSettings(updated);
     setAccessSettings(updated);
+    try { localStorage.setItem('ddp_access_settings', JSON.stringify(updated)); } catch {}
     saveAppSettingToDB('access', updated).catch(err => console.warn('Supabase access setting error:', err));
     showFeedback(`Política de cadastro alterada: ${mode === 'open' ? 'Acesso Livre (Imediato)' : 'Apenas por Confirmação da Admin'}`);
   };
