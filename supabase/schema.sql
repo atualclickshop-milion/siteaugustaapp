@@ -159,11 +159,6 @@ CREATE POLICY "Allow Admin Updates Moments" ON public.moments FOR ALL USING (tru
 CREATE POLICY "Public Read Announcements" ON public.announcements FOR SELECT USING (true);
 CREATE POLICY "Allow All Announcements Update" ON public.announcements FOR ALL USING (true) WITH CHECK (true);
 
--- Seed Sample Ad
-INSERT INTO public.announcements (id, title, text, media_type, media_url, button_text, button_link, enabled, views_count, clicks_count, closes_count, display_order)
-VALUES 
-('ad-1', 'Conheça a Comunidade Mães da Madrugada', 'Junte-se ao nosso grupo exclusivo de acolhimento e troque experiências amorosas com outras mães.', 'image', '/dorme-dorme-precioso-capa.png', 'Participar do Grupo', 'https://chat.whatsapp.com', true, 142, 38, 75, 1)
-ON CONFLICT (id) DO NOTHING;
 
 -- STREAMING PLATFORMS (Links YouTube, Spotify, Apple, Deezer, etc.)
 CREATE TABLE IF NOT EXISTS public.streaming_platforms (

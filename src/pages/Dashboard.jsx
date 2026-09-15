@@ -31,8 +31,30 @@ export default function Dashboard() {
     duration,
     formatTime,
     homeSettings,
-    momentsList
+    momentsList,
+    streamingPlatforms
   } = useApp();
+
+  const activeStreamingPlatforms = (streamingPlatforms || []).filter(p => p.enabled);
+  const isSpecialSongPlaying = isPlaying && currentTrack?.id === specialSong?.id;
+
+  const handlePlaySpecialSong = (e) => {
+    if (e) e.stopPropagation();
+    if (!specialSong) return;
+    if (currentTrack?.id === specialSong.id) {
+      togglePlay();
+    } else {
+      playTrack({
+        id: specialSong.id,
+        title: specialSong.title || 'Dorme, Dorme, Precioso',
+        subtitle: `Por ${specialSong.artist || 'Augusta'}`,
+        coverUrl: specialSong.coverUrl || '/dorme-dorme-precioso-capa.png',
+        audioUrl: specialSong.audioUrl || '/dorme-dorme-precioso-master.wav',
+        durationFormatted: specialSong.duration || '03:45',
+        type: 'song'
+      });
+    }
+  };
 
   const getBrazilGreeting = () => {
     try {
@@ -320,6 +342,124 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* CANÇÃO PRINCIPAL DO APP (Controlado por showSpecialSongBanner) */}
+        {showSpecialSongBanner && (
+          <div className="w-full relative overflow-hidden bg-gradient-to-br from-[#06162B] via-[#0E223D] to-[#1C160C] text-white rounded-[24px] p-5 sm:p-6 shadow-xl border border-amber-500/30 transition-all">
+            {/* Background sparkles & gold ambient glow */}
+            <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-400/15 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute right-4 top-3 text-[10px] text-amber-200/40 pointer-events-none select-none">✦</div>
+            <div className="absolute right-14 bottom-4 text-[12px] text-amber-200/30 pointer-events-none select-none">✨</div>
+            <div className="absolute right-28 top-5 text-[8px] text-amber-100/50 pointer-events-none select-none">✦</div>
+
+            {/* Header / Badge Row */}
+            <div className="flex items-center justify-between gap-2 mb-3.5 relative z-10">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Canção Principal do App</span>
+              </div>
+              <span className="text-[11px] text-slate-300 font-medium flex items-center gap-1">
+                <Clock className="w-3 h-3 text-slate-400" />
+                <span>{specialSong?.duration || '03:45'}</span>
+              </span>
+            </div>
+
+            {/* Song Content: Cover + Info + Play */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 relative z-10">
+              {/* Cover Art with Play Button */}
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shrink-0 shadow-md border border-amber-400/30 group">
+                <img
+                  src={specialSong?.coverUrl || '/dorme-dorme-precioso-capa.png'}
+                  alt={specialSong?.title || 'Canção Principal'}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  onError={(e) => { e.currentTarget.src = '/dorme-dorme-precioso-capa.png'; }}
+                />
+                <button
+                  type="button"
+                  onClick={handlePlaySpecialSong}
+                  className="absolute inset-0 bg-black/40 hover:bg-black/50 transition-colors flex items-center justify-center cursor-pointer"
+                  title={isSpecialSongPlaying ? 'Pausar canção' : 'Ouvir canção'}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-md ${
+                    isSpecialSongPlaying ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-white/95 text-slate-900 hover:scale-110'
+                  }`}>
+                    {isSpecialSongPlaying ? (
+                      <Pause className="w-5 h-5 fill-current" />
+                    ) : (
+                      <Play className="w-5 h-5 ml-0.5 fill-current" />
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              {/* Title, Artist, Description, CTA */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-white font-serif truncate">
+                  {specialSong?.title || 'Dorme, Dorme, Precioso'}
+                </h3>
+                <p className="text-xs text-amber-200 font-medium truncate mt-0.5">
+                  Por {specialSong?.artist || 'Augusta'}
+                </p>
+                <p className="text-[11px] text-slate-300 line-clamp-2 mt-1 font-sans">
+                  {specialSong?.tagline || specialSong?.description || 'Canção suave para acalmar o bebê e acolher as mamães.'}
+                </p>
+
+                <div className="mt-3 flex items-center gap-2.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => navigateTo('song-special')}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
+                  >
+                    <span>Ver Letra & Plataformas</span>
+                    <ChevronRight size={13} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePlaySpecialSong}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-white/10"
+                  >
+                    {isSpecialSongPlaying ? (
+                      <>
+                        <Pause size={12} className="fill-current text-amber-300" />
+                        <span className="text-amber-300">Pausar Áudio</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play size={12} className="fill-current text-amber-300" />
+                        <span>Ouvir Agora</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Streaming Links Bar */}
+            {activeStreamingPlatforms.length > 0 && (
+              <div className="mt-4 pt-3.5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 relative z-10">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                  Ouvir nos aplicativos de música:
+                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {activeStreamingPlatforms.map(p => (
+                    <a
+                      key={p.id}
+                      href={p.url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-[11px] font-medium text-slate-200 hover:text-white transition-all flex items-center gap-1.5 hover:scale-105"
+                      title={`Ouvir ${specialSong?.title || 'Dorme, Dorme, Precioso'} no ${p.name}`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                      <span>{p.name}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ESCOLHA SEU MOMENTO (DYNAMIC RENDERING FROM momentsList) */}
         {visibleMoments.length > 0 && (
           <div>
@@ -366,7 +506,7 @@ export default function Dashboard() {
                          moment.audioUrl && (
                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
                              <div className="w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
-                               <Play className="w-4 h-4 fill-amber-600 text-amber-600 ml-1" />
+                                <Play className="w-4 h-4 fill-amber-600 text-amber-600 ml-1" />
                              </div>
                            </div>
                          )
@@ -412,37 +552,6 @@ export default function Dashboard() {
               })}
             </div>
           </div>
-        )}
-
-        {/* FULL WIDTH CARD: QUERO DORMIR (Controlled by showSpecialSongBanner) */}
-        {showSpecialSongBanner && (
-          <button
-            onClick={() => navigateTo('song-special')}
-            className="w-full relative overflow-hidden bg-gradient-to-r from-[#06162B] via-[#0E2845] to-[#7C5329] text-white rounded-[22px] p-5 shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all flex items-center justify-between text-left group border border-amber-500/20 cursor-pointer"
-          >
-            {/* Starry background sparkles & glow effect */}
-            <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-300/20 via-transparent to-transparent pointer-events-none"></div>
-            <div className="absolute right-3 top-2 text-[10px] text-amber-200/40 pointer-events-none select-none">✦</div>
-            <div className="absolute right-12 bottom-3 text-[12px] text-amber-200/30 pointer-events-none select-none">✨</div>
-            <div className="absolute right-24 top-4 text-[8px] text-amber-100/50 pointer-events-none select-none">✦</div>
-
-            <div className="flex items-center gap-4 relative z-10">
-              {/* Glowing Golden Crescent Moon */}
-              <div className="relative shrink-0 flex items-center justify-center p-1">
-                <Moon className="w-9 h-9 text-[#F5D796] fill-[#F5D796] drop-shadow-[0_0_14px_rgba(245,215,150,0.65)] transform -rotate-12 group-hover:scale-110 transition-transform" />
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-white font-serif tracking-wide group-hover:text-amber-200 transition-colors">
-                  Quero dormir
-                </h3>
-                <p className="text-xs text-slate-200/90 mt-0.5 font-sans font-medium">
-                  Canções e áudios para um ambiente tranquilo.
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-amber-200/80 group-hover:translate-x-1 transition-transform relative z-10" />
-          </button>
         )}
 
       </div>

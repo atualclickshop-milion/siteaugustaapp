@@ -8,6 +8,8 @@ import {
   deleteMomentFromDB,
   saveMomentsToDB,
   saveAppSettingToDB,
+  saveStreamingPlatformsToDB,
+  saveAnnouncementsToDB,
   deleteAnnouncementFromDB
 } from '../lib/supabaseClient';
 import { idbSet } from '../utils/storageHelper';
@@ -648,6 +650,12 @@ export default function AdminPage({ onLogout }) {
   const [showPasswordInModal, setShowPasswordInModal] = useState(false);
   const [localAccessSettings, setLocalAccessSettings] = useState(accessSettings);
 
+  useEffect(() => {
+    if (accessSettings) {
+      setLocalAccessSettings(accessSettings);
+    }
+  }, [accessSettings]);
+
   const handleOpenNewUser = () => {
     setEditingUserId(null);
     setUserFormName('');
@@ -768,6 +776,13 @@ export default function AdminPage({ onLogout }) {
 
   // --- Platforms & Support State & Handlers ---
   const [localPlatforms, setLocalPlatforms] = useState(streamingPlatforms);
+
+  useEffect(() => {
+    if (streamingPlatforms && Array.isArray(streamingPlatforms) && streamingPlatforms.length > 0) {
+      setLocalPlatforms(streamingPlatforms);
+    }
+  }, [streamingPlatforms]);
+
   const handleTogglePlatform = (id) => {
     setLocalPlatforms(localPlatforms.map(p => p.id === id ? { ...p, enabled: !p.enabled } : p));
   };
@@ -777,14 +792,27 @@ export default function AdminPage({ onLogout }) {
   const handlePlatformCtaChange = (id, newCta) => {
     setLocalPlatforms(localPlatforms.map(p => p.id === id ? { ...p, ctaText: newCta } : p));
   };
-  const handleSavePlatforms = () => {
+  const handleSavePlatforms = async () => {
     setStreamingPlatforms(localPlatforms);
-    showFeedback('Configuração das plataformas salva!');
+    await idbSet('ddp_streaming_platforms', localPlatforms);
+    try { localStorage.setItem('ddp_streaming_platforms', JSON.stringify(localPlatforms)); } catch {}
+    await saveStreamingPlatformsToDB(localPlatforms);
+    showFeedback('Configuração das plataformas salva com sucesso!');
   };
 
   const [localSupportSettings, setLocalSupportSettings] = useState(supportSettings);
-  const handleSaveSupportSettings = () => {
+
+  useEffect(() => {
+    if (supportSettings) {
+      setLocalSupportSettings(supportSettings);
+    }
+  }, [supportSettings]);
+
+  const handleSaveSupportSettings = async () => {
     setSupportSettings(localSupportSettings);
+    await idbSet('ddp_support_settings', localSupportSettings);
+    try { localStorage.setItem('ddp_support_settings', JSON.stringify(localSupportSettings)); } catch {}
+    await saveAppSettingToDB('support', localSupportSettings);
     showFeedback('Configurações de Suporte e Grupo do WhatsApp salvas!');
   };
 
@@ -872,8 +900,14 @@ export default function AdminPage({ onLogout }) {
       confirmLabel: 'Sim, Excluir Anúncio',
       variant: 'danger',
       onConfirm: async () => {
-        setAnnouncements(announcements.filter(a => a.id !== id));
+        const updated = announcements.filter(a => a.id !== id);
+        setAnnouncements(updated);
+        await idbSet('ddp_announcements', updated);
+        try { localStorage.setItem('ddp_announcements', JSON.stringify(updated)); } catch {}
         await deleteAnnouncementFromDB(id);
+        if (updated.length === 0) {
+          await saveAnnouncementsToDB([]);
+        }
         showFeedback('Anúncio excluído com sucesso.');
       }
     });

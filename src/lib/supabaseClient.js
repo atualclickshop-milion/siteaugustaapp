@@ -612,9 +612,10 @@ export async function fetchAnnouncementsFromDB() {
     }
 
     if (!data) return null;
-    if (data.length === 0) return [];
+    const cleanData = data.filter(a => a.id !== 'ad-1');
+    if (cleanData.length === 0) return [];
 
-    return data.map(a => ({
+    return cleanData.map(a => ({
       id: a.id,
       title: a.title,
       text: a.text || '',
@@ -636,7 +637,17 @@ export async function fetchAnnouncementsFromDB() {
 export async function saveAnnouncementsToDB(adsList) {
   if (!Array.isArray(adsList)) return;
   try {
-    const rows = adsList.map((a, idx) => ({
+    const filtered = adsList.filter(a => a && a.id !== 'ad-1');
+    if (filtered.length === 0) {
+      await supabase.from('announcements').delete().neq('id', '___none___');
+      return;
+    }
+
+    const validIds = filtered.map(a => a.id);
+    // Remove any rows from DB that are no longer in validIds
+    await supabase.from('announcements').delete().not('id', 'in', `(${validIds.map(id => `"${id}"`).join(',')})`);
+
+    const rows = filtered.map((a, idx) => ({
       id: a.id,
       title: a.title || 'Anúncio',
       text: a.text || '',

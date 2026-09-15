@@ -172,7 +172,13 @@ export function AppProvider({ children }) {
   const [announcements, setAnnouncements] = useState(() => {
     try {
       const saved = localStorage.getItem('ddp_announcements');
-      return saved ? JSON.parse(saved) : INITIAL_ANNOUNCEMENTS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(a => a && a.id !== 'ad-1');
+        }
+      }
+      return INITIAL_ANNOUNCEMENTS;
     } catch {
       return INITIAL_ANNOUNCEMENTS;
     }
@@ -238,6 +244,153 @@ export function AppProvider({ children }) {
   };
 
   const isInitialSyncDoneRef = useRef(false);
+  const isRemoteSyncRef = useRef(false);
+
+  // Reusable sync function to pull fresh data from Supabase without echo-writing back
+  const syncAllFromSupabase = async () => {
+    try {
+      isRemoteSyncRef.current = true;
+      const [
+        dbBooks,
+        dbSong,
+        dbPlatforms,
+        dbPrayers,
+        dbMoments,
+        dbSettings,
+        dbProfiles,
+        dbAnnouncements
+      ] = await Promise.all([
+        fetchAudiobooksFromDB(),
+        fetchSpecialSongFromDB(),
+        fetchStreamingPlatformsFromDB(),
+        fetchPrayersFromDB(),
+        fetchMomentsFromDB(),
+        fetchAppSettingsFromDB(),
+        fetchProfilesFromDB(),
+        fetchAnnouncementsFromDB()
+      ]);
+
+      if (dbBooks !== null) {
+        setAudiobooks(prev => {
+          const current = (prev && prev.length > 0) ? prev : [];
+          const merged = dbBooks.map(dbBook => {
+            const localBook = current.find(b => b.id === dbBook.id);
+            if (!localBook) return dbBook;
+            return {
+              ...dbBook,
+              coverUrl: (localBook?.coverUrl?.startsWith('data:')) ? localBook.coverUrl : (dbBook.coverUrl || localBook?.coverUrl || ''),
+              chapters: (dbBook.chapters || []).map(dbCh => {
+                const localCh = (localBook.chapters || []).find(c => c.id === dbCh.id);
+                return {
+                  ...dbCh,
+                  coverUrl: (localCh?.coverUrl?.startsWith('data:')) ? localCh.coverUrl : (dbCh.coverUrl || localCh?.coverUrl || ''),
+                  audioUrl: (localCh?.audioUrl?.startsWith('data:')) ? localCh.audioUrl : ((dbCh.audioUrl && dbCh.audioUrl.trim()) ? dbCh.audioUrl : (localCh?.audioUrl || ''))
+                };
+              })
+            };
+          });
+          idbSet('ddp_audiobooks', merged);
+          return merged;
+        });
+      }
+
+      if (dbSong) {
+        setSpecialSong(prev => {
+          const current = prev || {};
+          const merged = {
+            ...dbSong,
+            audioUrl: (current?.audioUrl?.startsWith('data:')) ? current.audioUrl : ((dbSong.audioUrl && dbSong.audioUrl.trim()) ? dbSong.audioUrl : (current?.audioUrl || '')),
+            coverUrl: (current?.coverUrl?.startsWith('data:')) ? current.coverUrl : (dbSong.coverUrl || current?.coverUrl || '')
+          };
+          idbSet('ddp_special_song', merged);
+          return merged;
+        });
+      }
+
+      if (dbPlatforms !== null) {
+        setStreamingPlatforms(dbPlatforms);
+        idbSet('ddp_streaming_platforms', dbPlatforms);
+        try { localStorage.setItem('ddp_streaming_platforms', JSON.stringify(dbPlatforms)); } catch {}
+      }
+
+      if (dbPrayers !== null) {
+        setPrayers(prev => {
+          const current = (prev && prev.length > 0) ? prev : [];
+          const merged = dbPrayers.map(dbP => {
+            const localP = current.find(p => p.id === dbP.id);
+            return {
+              ...dbP,
+              audioUrl: (localP?.audioUrl?.startsWith('data:')) ? localP.audioUrl : ((dbP.audioUrl && dbP.audioUrl.trim()) ? dbP.audioUrl : (localP?.audioUrl || '')),
+              coverUrl: (localP?.coverUrl?.startsWith('data:')) ? localP.coverUrl : (dbP.coverUrl || localP?.coverUrl || '')
+            };
+          });
+          idbSet('ddp_prayers', merged);
+          return merged;
+        });
+      }
+
+      if (dbMoments !== null) {
+        setMomentsList(prev => {
+          const current = (prev && prev.length > 0) ? prev : [];
+          const mergedFromDb = dbMoments.map(dbM => {
+            const localM = current.find(m => m.id === dbM.id);
+            if (!localM) return dbM;
+            const hasCustomLocalAudio = localM.audioUrl && localM.audioUrl.trim();
+            const isGenericSeed = dbM.audioUrl === '/dorme-dorme-precioso-master.wav';
+            return {
+              ...dbM,
+              audioUrl: (hasCustomLocalAudio && isGenericSeed)
+                ? localM.audioUrl
+                : ((dbM.audioUrl && dbM.audioUrl.trim()) ? dbM.audioUrl : (localM.audioUrl || '')),
+              coverUrl: (localM?.coverUrl?.startsWith('data:')) ? localM.coverUrl : (dbM.coverUrl || localM?.coverUrl || ''),
+              enabled: typeof dbM.enabled === 'boolean' ? dbM.enabled : (localM.enabled !== false)
+            };
+          });
+          idbSet('ddp_moments_list', mergedFromDb);
+          try { localStorage.setItem('ddp_moments_list', JSON.stringify(mergedFromDb)); } catch {}
+          return mergedFromDb;
+        });
+      }
+
+      if (dbSettings) {
+        if (dbSettings.access) {
+          setAccessSettings(dbSettings.access);
+          idbSet('ddp_access_settings', dbSettings.access);
+          try { localStorage.setItem('ddp_access_settings', JSON.stringify(dbSettings.access)); } catch {}
+        }
+        if (dbSettings.support) {
+          setSupportSettings(dbSettings.support);
+          idbSet('ddp_support_settings', dbSettings.support);
+          try { localStorage.setItem('ddp_support_settings', JSON.stringify(dbSettings.support)); } catch {}
+        }
+        if (dbSettings.home) {
+          setHomeSettings(dbSettings.home);
+          idbSet('ddp_home_settings', dbSettings.home);
+          try { localStorage.setItem('ddp_home_settings', JSON.stringify(dbSettings.home)); } catch {}
+        }
+      }
+
+      if (dbProfiles !== null) {
+        setUsersList(dbProfiles);
+        idbSet('ddp_users_list', dbProfiles);
+        try { localStorage.setItem('ddp_users_list', JSON.stringify(dbProfiles)); } catch {}
+      }
+
+      if (dbAnnouncements !== null) {
+        const clean = Array.isArray(dbAnnouncements) ? dbAnnouncements.filter(a => a && a.id !== 'ad-1') : [];
+        setAnnouncements(clean);
+        idbSet('ddp_announcements', clean);
+        try { localStorage.setItem('ddp_announcements', JSON.stringify(clean)); } catch {}
+      }
+    } catch (err) {
+      console.warn('Supabase sync fetch error:', err);
+    } finally {
+      isInitialSyncDoneRef.current = true;
+      setTimeout(() => {
+        isRemoteSyncRef.current = false;
+      }, 300);
+    }
+  };
 
   // Async load from IndexedDB + Supabase Remote Sync on startup
   useEffect(() => {
@@ -290,144 +443,51 @@ export function AppProvider({ children }) {
         if (savedSupport) setSupportSettings(savedSupport);
         if (savedMoments) setMomentsList(savedMoments);
         if (savedHomeSettings) setHomeSettings(savedHomeSettings);
-        if (savedAnnouncements) setAnnouncements(savedAnnouncements);
+        if (savedAnnouncements) {
+          const clean = Array.isArray(savedAnnouncements) ? savedAnnouncements.filter(a => a && a.id !== 'ad-1') : [];
+          setAnnouncements(clean);
+        }
       }
 
       // 2. Fetch live data from Supabase DB in background
-      try {
-        const [
-          dbBooks,
-          dbSong,
-          dbPlatforms,
-          dbPrayers,
-          dbMoments,
-          dbSettings,
-          dbProfiles,
-          dbAnnouncements
-        ] = await Promise.all([
-          fetchAudiobooksFromDB(),
-          fetchSpecialSongFromDB(),
-          fetchStreamingPlatformsFromDB(),
-          fetchPrayersFromDB(),
-          fetchMomentsFromDB(),
-          fetchAppSettingsFromDB(),
-          fetchProfilesFromDB(),
-          fetchAnnouncementsFromDB()
-        ]);
-
-        if (mounted) {
-          if (dbBooks !== null) {
-            setAudiobooks(prev => {
-              const current = (prev && prev.length > 0) ? prev : (savedBooks || []);
-              const merged = dbBooks.map(dbBook => {
-                const localBook = current.find(b => b.id === dbBook.id);
-                if (!localBook) return dbBook;
-                return {
-                  ...dbBook,
-                  coverUrl: (localBook?.coverUrl?.startsWith('data:')) ? localBook.coverUrl : (dbBook.coverUrl || localBook?.coverUrl || ''),
-                  chapters: (dbBook.chapters || []).map(dbCh => {
-                    const localCh = (localBook.chapters || []).find(c => c.id === dbCh.id);
-                    return {
-                      ...dbCh,
-                      coverUrl: (localCh?.coverUrl?.startsWith('data:')) ? localCh.coverUrl : (dbCh.coverUrl || localCh?.coverUrl || ''),
-                      audioUrl: (localCh?.audioUrl?.startsWith('data:')) ? localCh.audioUrl : ((dbCh.audioUrl && dbCh.audioUrl.trim()) ? dbCh.audioUrl : (localCh?.audioUrl || ''))
-                    };
-                  })
-                };
-              });
-              idbSet('ddp_audiobooks', merged);
-              return merged;
-            });
-          }
-          if (dbSong) {
-            setSpecialSong(prev => {
-              const current = prev || savedSong || {};
-              const merged = {
-                ...dbSong,
-                audioUrl: (current?.audioUrl?.startsWith('data:')) ? current.audioUrl : ((dbSong.audioUrl && dbSong.audioUrl.trim()) ? dbSong.audioUrl : (current?.audioUrl || '')),
-                coverUrl: (current?.coverUrl?.startsWith('data:')) ? current.coverUrl : (dbSong.coverUrl || current?.coverUrl || '')
-              };
-              idbSet('ddp_special_song', merged);
-              return merged;
-            });
-          }
-          if (dbPlatforms !== null) {
-            setStreamingPlatforms(dbPlatforms);
-            idbSet('ddp_streaming_platforms', dbPlatforms);
-          }
-          if (dbPrayers !== null) {
-            setPrayers(prev => {
-              const current = (prev && prev.length > 0) ? prev : (savedPrayers || []);
-              const merged = dbPrayers.map(dbP => {
-                const localP = current.find(p => p.id === dbP.id);
-                return {
-                  ...dbP,
-                  audioUrl: (localP?.audioUrl?.startsWith('data:')) ? localP.audioUrl : ((dbP.audioUrl && dbP.audioUrl.trim()) ? dbP.audioUrl : (localP?.audioUrl || '')),
-                  coverUrl: (localP?.coverUrl?.startsWith('data:')) ? localP.coverUrl : (dbP.coverUrl || localP?.coverUrl || '')
-                };
-              });
-              idbSet('ddp_prayers', merged);
-              return merged;
-            });
-          }
-          if (dbMoments !== null) {
-            setMomentsList(prev => {
-              const current = (prev && prev.length > 0) ? prev : (savedMoments || []);
-              // 1. Map all moments from DB, preserving local custom audio/cover
-              const mergedFromDb = dbMoments.map(dbM => {
-                const localM = current.find(m => m.id === dbM.id);
-                if (!localM) return dbM;
-                const hasCustomLocalAudio = localM.audioUrl && localM.audioUrl.trim();
-                const isGenericSeed = dbM.audioUrl === '/dorme-dorme-precioso-master.wav';
-                return {
-                  ...dbM,
-                  audioUrl: (hasCustomLocalAudio && isGenericSeed)
-                    ? localM.audioUrl
-                    : ((dbM.audioUrl && dbM.audioUrl.trim()) ? dbM.audioUrl : (localM.audioUrl || '')),
-                  coverUrl: (localM?.coverUrl?.startsWith('data:')) ? localM.coverUrl : (dbM.coverUrl || localM?.coverUrl || ''),
-                  enabled: typeof dbM.enabled === 'boolean' ? dbM.enabled : (localM.enabled !== false)
-                };
-              });
-              const finalMoments = [...mergedFromDb];
-              idbSet('ddp_moments_list', finalMoments);
-              try { localStorage.setItem('ddp_moments_list', JSON.stringify(finalMoments)); } catch {}
-              return finalMoments;
-            });
-          }
-          if (dbSettings) {
-            if (dbSettings.access) {
-              setAccessSettings(dbSettings.access);
-              idbSet('ddp_access_settings', dbSettings.access);
-            }
-            if (dbSettings.support) {
-              setSupportSettings(dbSettings.support);
-              idbSet('ddp_support_settings', dbSettings.support);
-            }
-            if (dbSettings.home) {
-              setHomeSettings(dbSettings.home);
-              idbSet('ddp_home_settings', dbSettings.home);
-            }
-          }
-          if (dbProfiles !== null) {
-            setUsersList(dbProfiles);
-            idbSet('ddp_users_list', dbProfiles);
-            try {
-              localStorage.setItem('ddp_users_list', JSON.stringify(dbProfiles));
-            } catch {}
-          }
-          if (dbAnnouncements !== null) {
-            setAnnouncements(dbAnnouncements);
-            idbSet('ddp_announcements', dbAnnouncements);
-            try { localStorage.setItem('ddp_announcements', JSON.stringify(dbAnnouncements)); } catch {}
-          }
-        }
-      } catch (err) {
-        console.warn('Supabase initial fetch failed, using local offline data:', err);
-      } finally {
-        isInitialSyncDoneRef.current = true;
-      }
+      await syncAllFromSupabase();
     })();
     return () => { mounted = false; };
+  }, []);
+
+  // Cross-device synchronization: Listen to Window Focus, Visibility Change, and Supabase Realtime
+  useEffect(() => {
+    let focusTimer = null;
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        clearTimeout(focusTimer);
+        focusTimer = setTimeout(() => {
+          syncAllFromSupabase();
+        }, 150);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    // Realtime channel for live updates across multiple devices (phone & desktop open simultaneously)
+    const realtimeChannel = supabase
+      .channel('public-db-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        (payload) => {
+          syncAllFromSupabase();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearTimeout(focusTimer);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+      supabase.removeChannel(realtimeChannel);
+    };
   }, []);
 
   // Fetch user-specific favorites & progress from Supabase when user is set
@@ -646,68 +706,68 @@ export function AppProvider({ children }) {
 
   // Safe Sync to IndexedDB + LocalStorage + Supabase DB
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_audiobooks', audiobooks);
     try { localStorage.setItem('ddp_audiobooks', JSON.stringify(audiobooks)); } catch {}
     saveAudiobooksToDB(audiobooks);
   }, [audiobooks]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_special_song', specialSong);
     try { localStorage.setItem('ddp_special_song', JSON.stringify(specialSong)); } catch {}
     saveSpecialSongToDB(specialSong);
   }, [specialSong]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_prayers', prayers);
     try { localStorage.setItem('ddp_prayers', JSON.stringify(prayers)); } catch {}
     savePrayersToDB(prayers);
   }, [prayers]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_streaming_platforms', streamingPlatforms);
     try { localStorage.setItem('ddp_streaming_platforms', JSON.stringify(streamingPlatforms)); } catch {}
     saveStreamingPlatformsToDB(streamingPlatforms);
   }, [streamingPlatforms]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_favorites', favorites);
     try { localStorage.setItem('ddp_favorites', JSON.stringify(favorites)); } catch {}
   }, [favorites]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_users_list', usersList);
     try { localStorage.setItem('ddp_users_list', JSON.stringify(usersList)); } catch {}
   }, [usersList]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_access_settings', accessSettings);
     try { localStorage.setItem('ddp_access_settings', JSON.stringify(accessSettings)); } catch {}
     saveAppSettingToDB('access', accessSettings);
   }, [accessSettings]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_support_settings', supportSettings);
     try { localStorage.setItem('ddp_support_settings', JSON.stringify(supportSettings)); } catch {}
     saveAppSettingToDB('support', supportSettings);
   }, [supportSettings]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_moments_list', momentsList);
     try { localStorage.setItem('ddp_moments_list', JSON.stringify(momentsList)); } catch {}
     saveMomentsToDB(momentsList);
   }, [momentsList]);
 
   useEffect(() => {
-    if (!isInitialSyncDoneRef.current) return;
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_home_settings', homeSettings);
     saveAppSettingToDB('home', homeSettings);
     try {
@@ -716,6 +776,7 @@ export function AppProvider({ children }) {
   }, [homeSettings]);
 
   useEffect(() => {
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
     idbSet('ddp_announcements', announcements);
     try { localStorage.setItem('ddp_announcements', JSON.stringify(announcements)); } catch {}
     saveAnnouncementsToDB(announcements);
