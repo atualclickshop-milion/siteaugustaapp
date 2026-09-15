@@ -12,8 +12,8 @@ export default function AdModal() {
     // Find the first active enabled ad
     const enabledAd = (announcements || []).find(a => a.enabled !== false);
     if (enabledAd) {
-      // Check if user dismissed this ad in current session
-      const dismissed = sessionStorage.getItem(`ddp_ad_dismissed_${enabledAd.id}`);
+      // Check if user dismissed this ad permanently
+      const dismissed = localStorage.getItem(`ddp_ad_dismissed_${enabledAd.id}`);
       if (!dismissed) {
         setActiveAd(enabledAd);
         setIsOpen(true);
@@ -30,7 +30,7 @@ export default function AdModal() {
   const handleClose = () => {
     setIsOpen(false);
     if (activeAd?.id) {
-      sessionStorage.setItem(`ddp_ad_dismissed_${activeAd.id}`, 'true');
+      localStorage.setItem(`ddp_ad_dismissed_${activeAd.id}`, 'true');
       trackAdMetric(activeAd.id, 'close');
     }
   };

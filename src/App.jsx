@@ -24,16 +24,21 @@ import WelcomePage from './pages/WelcomePage';
 import { Moon, BookOpen, Music, Heart, User } from 'lucide-react';
 
 function AppContent() {
-  const { currentView, navigateTo, isPlayerVisible } = useApp();
+  const { currentView, navigateTo, isPlayerVisible, currentTrack } = useApp();
 
-  // Listen for special direct URL access: #admin, /admin, or ?admin
+  // Listen for special direct URL access: #admin, /admin, or ?admin etc.
   useEffect(() => {
     const handleUrlRouting = () => {
       const hash = window.location.hash.toLowerCase();
       const path = window.location.pathname.toLowerCase();
       const search = window.location.search.toLowerCase();
-      if (hash === '#admin' || path === '/admin' || search.includes('admin')) {
+      
+      if (hash.includes('admin') || path.includes('/admin') || search.includes('admin')) {
         navigateTo('admin');
+      } else if (hash.includes('login') || path.includes('/login') || search.includes('login')) {
+        navigateTo('login');
+      } else if (hash.includes('welcome') || path.includes('/welcome') || search.includes('welcome')) {
+        navigateTo('welcome');
       }
     };
 
@@ -101,7 +106,7 @@ function AppContent() {
 
       {/* Mobile Ergonomic Bottom Navigation Bar */}
       <nav className={`md:hidden fixed inset-x-0 z-40 bg-white/95 dark:bg-[#071325]/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-800/80 py-2 px-4 flex items-center justify-around shadow-lg transition-colors duration-300 ${
-        isPlayerVisible ? 'bottom-[68px]' : 'bottom-0'
+        (isPlayerVisible && currentTrack) ? 'bottom-[68px]' : 'bottom-0'
       }`}>
         {[
           { id: 'dashboard', label: 'Início', icon: Moon },

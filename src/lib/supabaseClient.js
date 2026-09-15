@@ -656,6 +656,19 @@ export async function saveAnnouncementsToDB(adsList) {
   }
 }
 
+export async function deleteAnnouncementFromDB(id) {
+  if (!id) return;
+  try {
+    const { error } = await supabase
+      .from('announcements')
+      .delete()
+      .eq('id', id);
+    if (error) console.warn('Supabase deleteAnnouncement error:', error);
+  } catch (e) {
+    console.warn('Supabase deleteAnnouncement error:', e);
+  }
+}
+
 export async function incrementAdMetricInDB(adId, metricType) {
   if (!adId || !metricType) return;
   try {

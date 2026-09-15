@@ -1,7 +1,7 @@
 import React from 'react';
 import { Users, Headphones, Music2, PlayCircle, Heart, TrendingUp, ArrowUpRight } from 'lucide-react';
 
-export default function AdminOverviewTab({ realDbStats, usersList, audiobooks, momentsList, prayers }) {
+export default function AdminOverviewTab({ realDbStats, usersList, audiobooks, momentsList, prayers, setActiveTab, handleOpenNewBook, handleOpenEditBook, setSelectedBookForChapters }) {
   const totalUsers = realDbStats ? realDbStats.totalUsers : usersList.length;
   const totalPlays = realDbStats ? realDbStats.totalPlays : 0;
   const totalFavorites = realDbStats ? realDbStats.totalFavorites : 0;
@@ -140,7 +140,13 @@ export default function AdminOverviewTab({ realDbStats, usersList, audiobooks, m
       <div className="flex flex-col gap-3.5">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-800">Gerenciar Audiobooks</h2>
-          <button className="px-3.5 py-1.5 rounded-xl bg-[#0C1B3A] hover:bg-[#142a52] text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm">
+          <button 
+            onClick={() => {
+              setActiveTab('audiobooks');
+              handleOpenNewBook();
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-[#0C1B3A] hover:bg-[#142a52] text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+          >
             <span>+ Novo audiobook</span>
           </button>
         </div>
@@ -149,7 +155,12 @@ export default function AdminOverviewTab({ realDbStats, usersList, audiobooks, m
           {audiobooks.slice(0, 4).map(book => (
             <div
               key={book.id}
-              className="min-w-[220px] max-w-[240px] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow shrink-0"
+              onClick={() => {
+                setActiveTab('audiobooks');
+                setSelectedBookForChapters(book);
+                handleOpenEditBook(book);
+              }}
+              className="min-w-[220px] max-w-[240px] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow shrink-0 cursor-pointer"
             >
               <div className="relative h-28 overflow-hidden bg-slate-100">
                 <img

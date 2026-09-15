@@ -7,7 +7,8 @@ import {
   uploadMediaFile,
   deleteMomentFromDB,
   saveMomentsToDB,
-  saveAppSettingToDB
+  saveAppSettingToDB,
+  deleteAnnouncementFromDB
 } from '../lib/supabaseClient';
 import { idbSet } from '../utils/storageHelper';
 import { Check } from 'lucide-react';
@@ -860,12 +861,13 @@ export default function AdminPage({ onLogout }) {
   const handleDeleteAd = (id) => {
     triggerConfirm({
       title: 'Excluir Anúncio?',
-      message: 'Tem certeza que deseja remover este anúncio?',
+      message: 'Tem certeza que deseja remover este anúncio permanentemente?',
       confirmLabel: 'Sim, Excluir Anúncio',
       variant: 'danger',
-      onConfirm: () => {
+      onConfirm: async () => {
         setAnnouncements(announcements.filter(a => a.id !== id));
-        showFeedback('Anúncio excluído.');
+        await deleteAnnouncementFromDB(id);
+        showFeedback('Anúncio excluído com sucesso.');
       }
     });
   };
@@ -925,6 +927,10 @@ export default function AdminPage({ onLogout }) {
           audiobooks={audiobooks}
           momentsList={momentsList}
           prayers={prayers}
+          setActiveTab={setActiveTab}
+          handleOpenNewBook={handleOpenNewBook}
+          handleOpenEditBook={handleOpenEditBook}
+          setSelectedBookForChapters={setSelectedBookForChapters}
         />
       )}
 
