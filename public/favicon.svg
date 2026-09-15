@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#061423" />
+    </linearGradient>
+    <radialGradient id="goldGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </radialGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#grad)" stroke="#d4af37" stroke-width="2"/>
+  <!-- Crescent Moon -->
+  <path d="M52 22 A 28 28 0 1 0 78 68 A 24 24 0 1 1 52 22 Z" fill="url(#goldGlow)" />
+  <!-- Guiding Star -->
+  <polygon points="68,26 71,33 78,34 73,39 74,46 68,42 62,46 63,39 58,34 65,33" fill="#ffffff" filter="drop-shadow(0 0 3px #fcd34d)"/>
+</svg>
