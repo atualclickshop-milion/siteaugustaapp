@@ -12,6 +12,7 @@ import {
   Sparkles,
   Volume2,
   Clock
+} from 'lucide-react';
 
 export default function Dashboard() {
   const { 
