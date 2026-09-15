@@ -455,12 +455,16 @@ export async function saveAudiobooksToDB(audiobooksList) {
   try {
     for (let idx = 0; idx < audiobooksList.length; idx++) {
       const b = audiobooksList[idx];
+      const safeBookCoverUrl = (b.coverUrl && b.coverUrl.length > 100000 && b.coverUrl.startsWith('data:'))
+        ? '' // Do not sync giant local Base64 images to DB string columns
+        : (b.coverUrl || '');
+
       const bookRow = {
         id: b.id,
         title: b.title || 'Audiobook',
         subtitle: b.subtitle || '',
         description: b.description || '',
-        cover_url: b.coverUrl || '',
+        cover_url: safeBookCoverUrl,
         author: b.author || 'Augusta',
         total_duration: b.totalDuration || '30 min',
         category: b.category || 'acolhimento',

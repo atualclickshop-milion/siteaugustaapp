@@ -258,7 +258,8 @@ export function AppProvider({ children }) {
         savedAccess, 
         savedSupport,
         savedMoments,
-        savedHomeSettings
+        savedHomeSettings,
+        savedAnnouncements
       ] = await Promise.all([
         idbGet('ddp_audiobooks', null),
         idbGet('ddp_special_song', null),
@@ -269,7 +270,8 @@ export function AppProvider({ children }) {
         idbGet('ddp_access_settings', null),
         idbGet('ddp_support_settings', null),
         idbGet('ddp_moments_list', null),
-        idbGet('ddp_home_settings', null)
+        idbGet('ddp_home_settings', null),
+        idbGet('ddp_announcements', null)
       ]);
       if (mounted) {
         if (savedBooks) setAudiobooks(savedBooks);
@@ -292,6 +294,7 @@ export function AppProvider({ children }) {
         if (savedSupport) setSupportSettings(savedSupport);
         if (savedMoments) setMomentsList(savedMoments);
         if (savedHomeSettings) setHomeSettings(savedHomeSettings);
+        if (savedAnnouncements) setAnnouncements(savedAnnouncements);
       }
 
       // 2. Fetch live data from Supabase DB in background
@@ -303,7 +306,8 @@ export function AppProvider({ children }) {
           dbPrayers,
           dbMoments,
           dbSettings,
-          dbProfiles
+          dbProfiles,
+          dbAnnouncements
         ] = await Promise.all([
           fetchAudiobooksFromDB(),
           fetchSpecialSongFromDB(),
@@ -311,7 +315,8 @@ export function AppProvider({ children }) {
           fetchPrayersFromDB(),
           fetchMomentsFromDB(),
           fetchAppSettingsFromDB(),
-          fetchProfilesFromDB()
+          fetchProfilesFromDB(),
+          fetchAnnouncementsFromDB()
         ]);
 
         if (mounted) {
@@ -323,13 +328,13 @@ export function AppProvider({ children }) {
                 if (!localBook) return dbBook;
                 return {
                   ...dbBook,
-                  coverUrl: dbBook.coverUrl || localBook.coverUrl,
+                  coverUrl: (localBook?.coverUrl?.startsWith('data:')) ? localBook.coverUrl : (dbBook.coverUrl || localBook?.coverUrl || ''),
                   chapters: (dbBook.chapters || []).map(dbCh => {
                     const localCh = (localBook.chapters || []).find(c => c.id === dbCh.id);
                     return {
                       ...dbCh,
-                      coverUrl: dbCh.coverUrl || localCh?.coverUrl,
-                      audioUrl: (dbCh.audioUrl && dbCh.audioUrl.trim()) ? dbCh.audioUrl : (localCh?.audioUrl || '')
+                      coverUrl: (localCh?.coverUrl?.startsWith('data:')) ? localCh.coverUrl : (dbCh.coverUrl || localCh?.coverUrl || ''),
+                      audioUrl: (localCh?.audioUrl?.startsWith('data:')) ? localCh.audioUrl : ((dbCh.audioUrl && dbCh.audioUrl.trim()) ? dbCh.audioUrl : (localCh?.audioUrl || ''))
                     };
                   })
                 };
@@ -343,8 +348,8 @@ export function AppProvider({ children }) {
               const current = prev || savedSong || {};
               const merged = {
                 ...dbSong,
-                audioUrl: (dbSong.audioUrl && dbSong.audioUrl.trim()) ? dbSong.audioUrl : (current.audioUrl || ''),
-                coverUrl: dbSong.coverUrl || current.coverUrl || ''
+                audioUrl: (current?.audioUrl?.startsWith('data:')) ? current.audioUrl : ((dbSong.audioUrl && dbSong.audioUrl.trim()) ? dbSong.audioUrl : (current?.audioUrl || '')),
+                coverUrl: (current?.coverUrl?.startsWith('data:')) ? current.coverUrl : (dbSong.coverUrl || current?.coverUrl || '')
               };
               idbSet('ddp_special_song', merged);
               return merged;
@@ -361,8 +366,8 @@ export function AppProvider({ children }) {
                 const localP = current.find(p => p.id === dbP.id);
                 return {
                   ...dbP,
-                  audioUrl: (dbP.audioUrl && dbP.audioUrl.trim()) ? dbP.audioUrl : (localP?.audioUrl || ''),
-                  coverUrl: dbP.coverUrl || localP?.coverUrl || ''
+                  audioUrl: (localP?.audioUrl?.startsWith('data:')) ? localP.audioUrl : ((dbP.audioUrl && dbP.audioUrl.trim()) ? dbP.audioUrl : (localP?.audioUrl || '')),
+                  coverUrl: (localP?.coverUrl?.startsWith('data:')) ? localP.coverUrl : (dbP.coverUrl || localP?.coverUrl || '')
                 };
               });
               idbSet('ddp_prayers', merged);
@@ -383,7 +388,7 @@ export function AppProvider({ children }) {
                   audioUrl: (hasCustomLocalAudio && isGenericSeed)
                     ? localM.audioUrl
                     : ((dbM.audioUrl && dbM.audioUrl.trim()) ? dbM.audioUrl : (localM.audioUrl || '')),
-                  coverUrl: dbM.coverUrl || localM.coverUrl || '',
+                  coverUrl: (localM?.coverUrl?.startsWith('data:')) ? localM.coverUrl : (dbM.coverUrl || localM?.coverUrl || ''),
                   enabled: typeof dbM.enabled === 'boolean' ? dbM.enabled : (localM.enabled !== false)
                 };
               });
@@ -416,6 +421,11 @@ export function AppProvider({ children }) {
             try {
               localStorage.setItem('ddp_users_list', JSON.stringify(dbProfiles));
             } catch {}
+          }
+          if (dbAnnouncements !== null) {
+            setAnnouncements(dbAnnouncements);
+            idbSet('ddp_announcements', dbAnnouncements);
+            try { localStorage.setItem('ddp_announcements', JSON.stringify(dbAnnouncements)); } catch {}
           }
         }
       } catch (err) {

@@ -121,9 +121,12 @@ export default function AdminPage({ onLogout }) {
   };
 
   // --- Generic File Readers & Cloud Uploaders ---
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
   const handleImageFileUpload = (e, setterUrl) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsUploadingMedia(true);
       const reader = new FileReader();
       reader.onload = (uploadEvent) => {
         setterUrl(uploadEvent.target.result);
@@ -133,13 +136,15 @@ export default function AdminPage({ onLogout }) {
       // Upload to Supabase Storage in background for persistence
       uploadMediaFile(file, 'covers').then(publicUrl => {
         if (publicUrl) setterUrl(publicUrl);
-      }).catch(err => console.warn('Image storage fallback:', err));
+      }).catch(err => console.warn('Image storage fallback:', err))
+        .finally(() => setIsUploadingMedia(false));
     }
   };
 
   const handleAudioFileUpload = (e, setterUrl, setterDuration, setterFileName = null) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsUploadingMedia(true);
       if (setterFileName) {
         setterFileName(file.name);
       }
@@ -157,7 +162,8 @@ export default function AdminPage({ onLogout }) {
         if (publicUrl) {
           setterUrl(publicUrl);
         }
-      }).catch(err => console.warn('Audio storage fallback:', err));
+      }).catch(err => console.warn('Audio storage fallback:', err))
+        .finally(() => setIsUploadingMedia(false));
     }
   };
 
@@ -910,6 +916,19 @@ export default function AdminPage({ onLogout }) {
 
       {/* Hidden Audio Element for Testing Previews */}
       <audio ref={testAudioRef} preload="none" />
+
+      {/* Uploading Overlay */}
+      {isUploadingMedia && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-4 max-w-sm text-center">
+            <div className="w-10 h-10 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin"></div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Enviando para a Nuvem...</h3>
+              <p className="text-xs text-slate-500 mt-1">Aguarde enquanto o arquivo é carregado no servidor público.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Feedback */}
       {saveToast && (
