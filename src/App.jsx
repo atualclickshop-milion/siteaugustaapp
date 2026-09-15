@@ -8,6 +8,7 @@ import CustomTimerModal from './components/CustomTimerModal';
 import BreathingModal from './components/BreathingModal';
 import AdModal from './components/AdModal';
 import WelcomeOnboardingModal from './components/WelcomeOnboardingModal';
+import InstallPWA from './components/InstallPWA';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -103,6 +104,9 @@ function AppContent() {
 
       {/* Welcome Onboarding Modal for New Users */}
       <WelcomeOnboardingModal />
+
+      {/* Global PWA Install Prompt */}
+      <InstallPWA />
 
       {/* Mobile Ergonomic Bottom Navigation Bar */}
       <nav className={`md:hidden fixed inset-x-0 z-40 bg-white/95 dark:bg-[#071325]/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-800/80 py-2 px-4 flex items-center justify-around shadow-lg transition-colors duration-300 ${
