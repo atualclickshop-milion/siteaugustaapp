@@ -181,13 +181,9 @@ export function AppProvider({ children }) {
   const [favorites, setFavorites] = useState(() => {
     try {
       const saved = localStorage.getItem('ddp_favorites');
-      return saved ? JSON.parse(saved) : [
-        'song-special-1',
-        'ab1-ch2',
-        'prayer-1'
-      ];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['song-special-1', 'ab1-ch2', 'prayer-1'];
+      return [];
     }
   });
 
@@ -464,7 +460,7 @@ export function AppProvider({ children }) {
         ]);
 
         if (mounted) {
-          if (userFavs && userFavs.length > 0) {
+          if (userFavs !== null) {
             setFavorites(userFavs);
             idbSet(`ddp_favorites_${user.email.toLowerCase()}`, userFavs);
           }
@@ -1157,11 +1153,17 @@ export function AppProvider({ children }) {
     const nextState = !isCurrentlyFav;
 
     setFavorites(prev => {
+      let newFavs;
       if (isCurrentlyFav) {
-        return prev.filter(id => id !== trackId);
+        newFavs = prev.filter(id => id !== trackId);
       } else {
-        return [...prev, trackId];
+        newFavs = [...prev, trackId];
       }
+      try { localStorage.setItem('ddp_favorites', JSON.stringify(newFavs)); } catch {}
+      if (user?.email) {
+        idbSet(`ddp_favorites_${user.email.toLowerCase()}`, newFavs);
+      }
+      return newFavs;
     });
 
     if (user?.email) {
