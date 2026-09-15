@@ -316,7 +316,7 @@ export function AppProvider({ children }) {
         ]);
 
         if (mounted) {
-          if (dbBooks && dbBooks.length > 0) {
+          if (dbBooks !== null) {
             setAudiobooks(prev => {
               const current = (prev && prev.length > 0) ? prev : (savedBooks || []);
               const merged = dbBooks.map(dbBook => {
@@ -351,11 +351,11 @@ export function AppProvider({ children }) {
               return merged;
             });
           }
-          if (dbPlatforms && dbPlatforms.length > 0) {
+          if (dbPlatforms !== null) {
             setStreamingPlatforms(dbPlatforms);
             idbSet('ddp_streaming_platforms', dbPlatforms);
           }
-          if (dbPrayers && dbPrayers.length > 0) {
+          if (dbPrayers !== null) {
             setPrayers(prev => {
               const current = (prev && prev.length > 0) ? prev : (savedPrayers || []);
               const merged = dbPrayers.map(dbP => {
@@ -370,7 +370,7 @@ export function AppProvider({ children }) {
               return merged;
             });
           }
-          if (dbMoments && dbMoments.length > 0) {
+          if (dbMoments !== null) {
             setMomentsList(prev => {
               const current = (prev && prev.length > 0) ? prev : (savedMoments || []);
               // 1. Map all moments from DB, preserving local custom audio/cover
@@ -388,12 +388,9 @@ export function AppProvider({ children }) {
                   enabled: typeof dbM.enabled === 'boolean' ? dbM.enabled : (localM.enabled !== false)
                 };
               });
-              // 2. Preserve any local moments created by the user not in DB yet
-              const localCreatedMoments = current.filter(
-                localM => !dbMoments.some(dbM => dbM.id === localM.id)
-              );
-              const finalMoments = [...mergedFromDb, ...localCreatedMoments];
+              const finalMoments = [...mergedFromDb];
               idbSet('ddp_moments_list', finalMoments);
+              try { localStorage.setItem('ddp_moments_list', JSON.stringify(finalMoments)); } catch {}
               return finalMoments;
             });
           }
