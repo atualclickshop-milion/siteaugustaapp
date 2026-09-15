@@ -103,7 +103,8 @@ export async function fetchStreamingPlatformsFromDB() {
       .select('*')
       .order('display_order', { ascending: true });
 
-    if (error || !data || data.length === 0) return null;
+    if (error || !data) return null;
+    if (data.length === 0) return [];
 
     return data.map(p => ({
       id: p.id,
@@ -155,7 +156,8 @@ export async function fetchMomentsFromDB() {
       .select('*')
       .order('display_order', { ascending: true });
 
-    if (error || !data || data.length === 0) return null;
+    if (error || !data) return null;
+    if (data.length === 0) return [];
 
     return data.map(m => ({
       id: m.id,
@@ -277,7 +279,8 @@ export async function fetchProfilesFromDB() {
       .select('*')
       .order('created_at', { ascending: true });
 
-    if (error || !data || data.length === 0) return null;
+    if (error || !data) return null;
+    if (data.length === 0) return [];
 
     return data.map(p => ({
       id: p.id,
@@ -608,7 +611,8 @@ export async function fetchAnnouncementsFromDB() {
       return null;
     }
 
-    if (!data || data.length === 0) return null;
+    if (!data) return null;
+    if (data.length === 0) return [];
 
     return data.map(a => ({
       id: a.id,
