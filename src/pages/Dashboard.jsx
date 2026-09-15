@@ -10,8 +10,8 @@ import {
   ChevronRight,
   HeartHandshake,
   Sparkles,
-  Volume2
-} from 'lucide-react';
+  Volume2,
+  Clock
 
 export default function Dashboard() {
   const { 
@@ -340,49 +340,71 @@ export default function Dashboard() {
                   <button
                     key={moment.id}
                     onClick={() => handleMomentClick(moment)}
-                    className={`bg-white dark:bg-[#0E1F38] rounded-2xl p-4 border transition-all text-left flex flex-col justify-between min-h-[148px] group cursor-pointer relative overflow-hidden ${
+                    className={`bg-white dark:bg-[#0E1F38] rounded-2xl border transition-all text-left flex flex-col group cursor-pointer relative overflow-hidden p-0 ${
                       isCurrentlyPlaying 
-                        ? 'border-amber-500/80 shadow-md ring-1 ring-amber-500/40 bg-amber-50/20 dark:bg-amber-500/5' 
+                        ? 'border-amber-500/80 shadow-md ring-1 ring-amber-500/40' 
                         : 'border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md hover:border-amber-500/30'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 w-full">
-                      {/* Visual Icon */}
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-105 transition-all shrink-0 ${visual.bg}`}>
-                        {isCurrentlyPlaying ? (
-                          <Pause className="w-5 h-5 fill-current animate-pulse text-amber-600 dark:text-amber-400" />
-                        ) : (
-                          visual.icon
-                        )}
-                      </div>
-
-                      {/* Badge / Duration */}
-                      <div className="flex flex-col items-end">
-                        {moment.badge && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 truncate max-w-[90px]">
+                    {/* Large Image Header */}
+                    <div className="w-full aspect-[4/3] bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
+                      <img 
+                        src={moment.coverUrl || '/dorme-dorme-precioso-capa.png'} 
+                        alt={moment.title} 
+                        className={`w-full h-full object-cover transition-transform duration-700 ${isCurrentlyPlaying ? 'scale-110' : 'group-hover:scale-105'}`}
+                        onError={(e) => { e.target.src = '/dorme-dorme-precioso-capa.png'; }}
+                      />
+                      {/* Play/Pause Overlay */}
+                      {isCurrentlyPlaying ? (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
+                          <div className="w-12 h-12 rounded-full bg-amber-500/90 shadow-[0_0_15px_rgba(245,158,11,0.5)] flex items-center justify-center animate-pulse">
+                            <Pause className="w-5 h-5 fill-white text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                         moment.audioUrl && (
+                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                             <div className="w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0">
+                               <Play className="w-4 h-4 fill-amber-600 text-amber-600 ml-1" />
+                             </div>
+                           </div>
+                         )
+                      )}
+                      
+                      {/* Badge */}
+                      {moment.badge && (
+                        <div className="absolute top-2 right-2">
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-black/60 backdrop-blur-md text-white shadow-sm border border-white/10">
                             {moment.badge}
                           </span>
-                        )}
-                        {moment.duration && (
-                          <span className="text-[10px] font-mono text-slate-400 mt-1">
-                            {moment.duration}
-                          </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="mt-3">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">
-                          {moment.title}
-                        </h3>
-                        {moment.audioUrl && (
-                          <Volume2 className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Possui áudio especial" />
-                        )}
+                    {/* Content */}
+                    <div className="p-3.5 flex-1 flex flex-col justify-between w-full">
+                      <div>
+                        <div className="flex items-start justify-between gap-1.5">
+                          <h3 className="text-[14px] leading-tight font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
+                            {moment.title}
+                          </h3>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-snug line-clamp-2">
+                          {moment.description || moment.textSnippet || 'Momento especial de acolhimento para mães.'}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug line-clamp-2">
-                        {moment.description || moment.textSnippet || 'Momento especial de acolhimento para mães.'}
-                      </p>
+                      
+                      {moment.duration && (
+                        <div className="mt-3.5 flex items-center justify-between w-full">
+                          <div className="flex items-center gap-1.5 text-slate-400">
+                            <Clock className="w-3 h-3" />
+                            <span className="text-[10px] font-medium tracking-wide">{moment.duration}</span>
+                          </div>
+                          {moment.audioUrl && (
+                            <Volume2 className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Possui áudio especial" />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </button>
                 );
