@@ -1272,6 +1272,7 @@ export function AppProvider({ children }) {
 
     const updatedList = [newUser, ...usersList];
     setUsersList(updatedList);
+    saveProfileToDB(newUser); // Salva o novo usuário no banco de dados para que os administradores possam vê-lo e aprová-lo
     setLastPlayed(null);
     setCurrentTrack(null);
     setIsPlaying(false);
