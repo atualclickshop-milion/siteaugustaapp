@@ -426,19 +426,5 @@ export const INITIAL_HOME_SETTINGS = {
   showSpecialSongBanner: true
 };
 
-export const INITIAL_ANNOUNCEMENTS = [
-  {
-    id: "ad-1",
-    title: "Conheça a Comunidade Mães da Madrugada",
-    text: "Junte-se ao nosso grupo exclusivo de acolhimento e troque experiências amorosas com outras mães.",
-    mediaType: "image",
-    mediaUrl: "/dorme-dorme-precioso-capa.png",
-    buttonText: "Participar do Grupo",
-    buttonLink: "https://chat.whatsapp.com",
-    enabled: true,
-    viewsCount: 142,
-    clicksCount: 38,
-    closesCount: 75
-  }
-];
+export const INITIAL_ANNOUNCEMENTS = [];
 
