@@ -1243,7 +1243,7 @@ export function AppProvider({ children }) {
     setAudiobooks(INITIAL_AUDIOBOOKS);
     setSpecialSong(SPECIAL_SONG);
     setPrayers(PRAYERS_LIST);
-    setFavorites(['song-special-1', 'ab1-ch2', 'prayer-1']);
+    setFavorites([]);
     setUsersList(INITIAL_USERS_LIST);
     setAccessSettings(INITIAL_ACCESS_SETTINGS);
     setSupportSettings(INITIAL_SUPPORT_SETTINGS);
@@ -1503,6 +1503,7 @@ export function AppProvider({ children }) {
     setUser(null);
     setLastPlayed(null);
     setCurrentTrack(null);
+    setFavorites([]);
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -1511,10 +1512,17 @@ export function AppProvider({ children }) {
       audioRef.current.src = '';
     }
     try {
+      const userEmail = user?.email?.toLowerCase();
       localStorage.removeItem('ddp_user');
       localStorage.removeItem('ddp_last_played');
+      localStorage.removeItem('ddp_favorites');
       await idbRemove('ddp_user');
       await idbRemove('ddp_last_played');
+      await idbRemove('ddp_favorites');
+      if (userEmail) {
+        await idbRemove(`ddp_favorites_${userEmail}`);
+        await idbRemove(`ddp_last_played_${userEmail}`);
+      }
       await supabase.auth.signOut();
     } catch (e) {
       console.warn("Logout cleanup warning:", e);

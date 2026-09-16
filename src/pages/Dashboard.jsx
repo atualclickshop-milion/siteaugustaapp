@@ -32,7 +32,9 @@ export default function Dashboard() {
     formatTime,
     homeSettings,
     momentsList,
-    streamingPlatforms
+    streamingPlatforms,
+    isFavorite,
+    toggleFavorite
   } = useApp();
 
   const activeStreamingPlatforms = (streamingPlatforms || []).filter(p => p.enabled);
@@ -512,6 +514,23 @@ export default function Dashboard() {
                          )
                       )}
                       
+                      {/* Favorite Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(moment.id);
+                        }}
+                        className={`absolute top-2 left-2 z-10 w-7 h-7 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${
+                          isFavorite(moment.id)
+                            ? 'bg-rose-500/90 text-white shadow-md scale-105'
+                            : 'bg-black/40 text-white/80 hover:text-white hover:bg-black/60 hover:scale-105'
+                        }`}
+                        title={isFavorite(moment.id) ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+                      >
+                        <Heart size={13} className={isFavorite(moment.id) ? 'fill-current text-white' : ''} />
+                      </button>
+
                       {/* Badge */}
                       {moment.badge && (
                         <div className="absolute top-2 right-2">

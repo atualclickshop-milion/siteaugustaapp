@@ -14,11 +14,12 @@ import {
   FileText,
   Maximize2,
   Minimize2,
-  X
+  X,
+  Heart
 } from 'lucide-react';
 
 export default function PrayersPage() {
-  const { prayers, playTrack, currentTrack, isPlaying, togglePlay, navigateTo } = useApp();
+  const { prayers, playTrack, currentTrack, isPlaying, togglePlay, navigateTo, isFavorite, toggleFavorite } = useApp();
   const [readingPrayer, setReadingPrayer] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [viewMode, setViewMode] = useState('slides'); // 'slides' or 'fullText'
@@ -124,8 +125,21 @@ export default function PrayersPage() {
                 </div>
               </div>
 
-              {/* Audio Play/Pause & Fullscreen Buttons */}
+              {/* Audio Play/Pause, Favorite & Fullscreen Buttons */}
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(readingPrayer.id)}
+                  className={`p-2 rounded-xl border transition-all flex items-center gap-1 text-xs font-bold ${
+                    isFavorite(readingPrayer.id)
+                      ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-rose-500 border-slate-200 dark:border-slate-700'
+                  }`}
+                  title={isFavorite(readingPrayer.id) ? 'Remover dos favoritos' : 'Favoritar oração'}
+                >
+                  <Heart size={16} className={isFavorite(readingPrayer.id) ? 'fill-rose-500 text-rose-500' : ''} />
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setIsFullScreen(true)}
@@ -338,21 +352,39 @@ export default function PrayersPage() {
                       </div>
                     </div>
 
-                    {/* Right Play Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectPrayer(prayer);
-                      }}
-                      className="w-10 h-10 rounded-full bg-[#0A1628] hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-sm transition-all shrink-0"
-                    >
-                      {isTrackPlaying ? (
-                        <Pause className="w-4 h-4 fill-current" />
-                      ) : (
-                        <Play className="w-4 h-4 ml-0.5 fill-current" />
-                      )}
-                    </button>
+                    {/* Right Action Buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(prayer.id);
+                        }}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                          isFavorite(prayer.id)
+                            ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-500'
+                            : 'text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                        title={isFavorite(prayer.id) ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+                      >
+                        <Heart className={`w-4 h-4 ${isFavorite(prayer.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectPrayer(prayer);
+                        }}
+                        className="w-10 h-10 rounded-full bg-[#0A1628] hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-sm transition-all"
+                      >
+                        {isTrackPlaying ? (
+                          <Pause className="w-4 h-4 fill-current" />
+                        ) : (
+                          <Play className="w-4 h-4 ml-0.5 fill-current" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 );
               })}

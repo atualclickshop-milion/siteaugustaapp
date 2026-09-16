@@ -29,8 +29,10 @@ export default function ProfilePage() {
     audiobooks, 
     specialSong, 
     prayers, 
+    momentsList,
     playTrack, 
     lastPlayed,
+    currentTrack,
     toggleFavorite,
     setIsWelcomeModalOpen 
   } = useApp();
@@ -89,40 +91,122 @@ export default function ProfilePage() {
 
   // Gather favorite items
   const favoriteItems = [];
-  if (favorites.includes(specialSong?.id)) {
-    favoriteItems.push({
-      id: specialSong.id,
-      title: specialSong.title,
-      subtitle: `Por ${specialSong.artist}`,
-      coverUrl: specialSong.coverUrl,
-      audioUrl: specialSong.audioUrl,
-      duration: specialSong.duration
-    });
-  }
-  for (const book of audiobooks) {
-    for (const ch of book.chapters) {
-      if (favorites.includes(ch.id)) {
+  const safeFavs = Array.isArray(favorites) ? favorites : [];
+
+  if (safeFavs.length > 0) {
+    // 1. Canção Principal / Especial
+    if (specialSong?.id && safeFavs.includes(specialSong.id)) {
+      favoriteItems.push({
+        id: specialSong.id,
+        title: specialSong.title,
+        subtitle: `Por ${specialSong.artist || 'Augusta'}`,
+        coverUrl: specialSong.coverUrl || "/dorme-dorme-precioso-capa.png",
+        audioUrl: specialSong.audioUrl,
+        duration: specialSong.duration || '03:45',
+        durationFormatted: specialSong.duration || '03:45'
+      });
+    }
+
+    // 2. Audiobooks & Capítulos
+    for (const book of (audiobooks || [])) {
+      // O audiolivro completo pode ser favoritado
+      if (safeFavs.includes(book.id)) {
         favoriteItems.push({
-          id: ch.id,
-          title: `${ch.number}. ${ch.title}`,
-          subtitle: book.title,
-          coverUrl: ch.coverUrl || book.coverUrl || "/dorme-dorme-precioso-capa.png",
-          audioUrl: ch.audioUrl,
-          duration: ch.duration
+          id: book.id,
+          title: book.title,
+          subtitle: book.author || 'Audiolivro Completo',
+          coverUrl: book.coverUrl || "/dorme-dorme-precioso-capa.png",
+          audioUrl: book.chapters?.[0]?.audioUrl || '',
+          duration: book.totalDuration || book.duration || '04:30',
+          durationFormatted: book.totalDuration || book.duration || '04:30'
+        });
+      }
+      // Capítulos individuais
+      for (const ch of (book.chapters || [])) {
+        if (safeFavs.includes(ch.id)) {
+          favoriteItems.push({
+            id: ch.id,
+            title: `${ch.number ? ch.number + '. ' : ''}${ch.title}`,
+            subtitle: book.title,
+            coverUrl: ch.coverUrl || book.coverUrl || "/dorme-dorme-precioso-capa.png",
+            audioUrl: ch.audioUrl,
+            duration: ch.duration || '04:30',
+            durationFormatted: ch.duration || '04:30'
+          });
+        }
+      }
+    }
+
+    // 3. Orações
+    for (const p of (prayers || [])) {
+      if (safeFavs.includes(p.id)) {
+        favoriteItems.push({
+          id: p.id,
+          title: p.title,
+          subtitle: p.subtitle || 'Oração de Acolhimento',
+          coverUrl: p.coverUrl || "/dorme-dorme-precioso-capa.png",
+          audioUrl: p.audioUrl,
+          duration: p.duration || '04:30',
+          durationFormatted: p.duration || '04:30'
         });
       }
     }
-  }
-  for (const p of prayers) {
-    if (favorites.includes(p.id)) {
-      favoriteItems.push({
-        id: p.id,
-        title: p.title,
-        subtitle: p.subtitle,
-        coverUrl: p.coverUrl,
-        audioUrl: p.audioUrl,
-        duration: p.duration
-      });
+
+    // 4. Momentos (Cards do Início: Acolhimento, Respiração, Amamentação, etc.)
+    for (const m of (momentsList || [])) {
+      if (safeFavs.includes(m.id)) {
+        favoriteItems.push({
+          id: m.id,
+          title: m.title,
+          subtitle: m.badge || m.description || 'Momento',
+          coverUrl: m.coverUrl || '/dorme-dorme-precioso-capa.png',
+          audioUrl: m.audioUrl || '/dorme-dorme-precioso-master.wav',
+          duration: m.duration || '04:30',
+          durationFormatted: m.duration || '04:30'
+        });
+      }
+    }
+
+    // 5. Fallback para quaisquer outros IDs favoritados que não foram encontrados acima (ex: em reprodução)
+    const trackedIds = new Set(favoriteItems.map(item => item.id));
+    for (const favId of safeFavs) {
+      if (!trackedIds.has(favId)) {
+        if (lastPlayed && (lastPlayed.trackId === favId || lastPlayed.id === favId)) {
+          favoriteItems.push({
+            id: favId,
+            title: lastPlayed.title || 'Áudio Favorito',
+            subtitle: lastPlayed.subtitle || 'Favoritos',
+            coverUrl: lastPlayed.coverUrl || '/dorme-dorme-precioso-capa.png',
+            audioUrl: lastPlayed.audioUrl,
+            duration: lastPlayed.duration || '04:30',
+            durationFormatted: lastPlayed.duration || '04:30'
+          });
+          trackedIds.add(favId);
+        } else if (currentTrack && currentTrack.id === favId) {
+          favoriteItems.push({
+            id: favId,
+            title: currentTrack.title || 'Áudio Favorito',
+            subtitle: currentTrack.subtitle || 'Favoritos',
+            coverUrl: currentTrack.coverUrl || '/dorme-dorme-precioso-capa.png',
+            audioUrl: currentTrack.audioUrl,
+            duration: currentTrack.durationFormatted || currentTrack.duration || '04:30',
+            durationFormatted: currentTrack.durationFormatted || currentTrack.duration || '04:30'
+          });
+          trackedIds.add(favId);
+        } else {
+          // Permite que o usuário veja e remova se desejar
+          favoriteItems.push({
+            id: favId,
+            title: 'Áudio Favorito',
+            subtitle: 'Conteúdo salvo',
+            coverUrl: '/dorme-dorme-precioso-capa.png',
+            audioUrl: '/dorme-dorme-precioso-master.wav',
+            duration: '04:30',
+            durationFormatted: '04:30'
+          });
+          trackedIds.add(favId);
+        }
+      }
     }
   }
 
@@ -339,12 +423,25 @@ export default function ProfilePage() {
                     className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3 cursor-pointer hover:bg-amber-50/50 dark:hover:bg-slate-800 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-[#0A1628] dark:bg-amber-500 text-white dark:text-slate-950 flex items-center justify-center shrink-0">
-                        <Play size={12} className="ml-0.5 fill-current" />
+                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700 relative shadow-sm">
+                        <img 
+                          src={item.coverUrl || '/dorme-dorme-precioso-capa.png'} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => { e.currentTarget.src = '/dorme-dorme-precioso-capa.png'; }} 
+                        />
+                        <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                          <Play size={12} className="text-white fill-white ml-0.5" />
+                        </div>
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">{item.title}</h4>
-                        <p className="text-[11px] text-slate-400 truncate">{item.subtitle}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-[11px] text-slate-400 truncate">{item.subtitle}</p>
+                          {item.duration && (
+                            <span className="text-[10px] text-amber-500 font-mono font-medium shrink-0">• {item.duration}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <button

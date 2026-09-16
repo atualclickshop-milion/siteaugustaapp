@@ -156,10 +156,26 @@ export default function AudiobookDetail() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[11px] font-mono text-slate-400">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                  <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
                     {chapter.duration || "08:32"}
                   </span>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(chapter.id);
+                    }}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                      isFavorite(chapter.id)
+                        ? 'bg-rose-50 text-rose-500 hover:bg-rose-100'
+                        : 'text-slate-400 hover:text-rose-500 hover:bg-slate-100'
+                    }`}
+                    title={isFavorite(chapter.id) ? 'Remover dos favoritos' : 'Favoritar capítulo'}
+                  >
+                    <Heart className={`w-4 h-4 ${isFavorite(chapter.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                  </button>
 
                   <button
                     type="button"
