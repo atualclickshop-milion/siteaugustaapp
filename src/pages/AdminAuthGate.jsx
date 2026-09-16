@@ -34,7 +34,7 @@ export default function AdminAuthGate() {
       setIsAdminAuthenticated(true);
       setErrorMessage('');
     } else {
-      setErrorMessage('Usuário ou senha de administradora incorretos.');
+      setErrorMessage('Usuário ou senha incorretos.');
     }
     setIsLoading(false);
   };
@@ -116,7 +116,7 @@ export default function AdminAuthGate() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Augusta"
+                placeholder="Digite seu usuário"
                 required
                 autoFocus
                 className="w-full py-2.5 px-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-400/50 text-sm focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/30 transition-all font-medium"
