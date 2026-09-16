@@ -815,7 +815,6 @@ export function AppProvider({ children }) {
       const key = `ddp_last_played_${user.email.toLowerCase()}`;
       idbSet(key, lastPlayed);
       try { localStorage.setItem(key, JSON.stringify(lastPlayed)); } catch {}
-      saveLastPlayedToDB(user.email, lastPlayed);
     }
   }, [lastPlayed, user?.email]);
 
@@ -930,7 +929,6 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'metadata';
-    audio.crossOrigin = 'anonymous';
     audioRef.current = audio;
 
     const handleError = (e) => {
@@ -964,8 +962,8 @@ export function AppProvider({ children }) {
           };
           setLastPlayed(newLastPlayed);
 
-          // Debounced Supabase sync every 5 seconds of active playback
-          if (userRef.current?.email && (now - lastSavedProgressRef.current > 5000)) {
+          // Debounced Supabase sync every 10 seconds of active playback
+          if (userRef.current?.email && (now - lastSavedProgressRef.current > 10000)) {
             lastSavedProgressRef.current = now;
             saveLastPlayedToDB(userRef.current.email, newLastPlayed);
           }
