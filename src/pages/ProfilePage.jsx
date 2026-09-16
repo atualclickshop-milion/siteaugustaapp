@@ -57,7 +57,7 @@ export default function ProfilePage() {
     setEditName(user?.name || '');
     setEditBabyName(user?.babyName || '');
     setEditPhone(user?.phone || user?.telefone || '');
-    setEditAvatarUrl(user?.avatarUrl || user?.avatar_url || '');
+    setEditAvatarUrl(user?.avatarUrl || user?.avatar_url || (user?.avatar && (user.avatar.startsWith('data:') || user.avatar.startsWith('http') || user.avatar.startsWith('/')) ? user.avatar : ''));
     setProfileSuccessNotice(false);
     setShowEditProfileModal(true);
   };
@@ -236,7 +236,7 @@ export default function ProfilePage() {
     }
   };
 
-  const userAvatarImage = user?.avatarUrl || user?.avatar_url || (user?.avatar && user.avatar.startsWith('data:') ? user.avatar : "/dorme-dorme-precioso-capa.png");
+  const userAvatarImage = user?.avatarUrl || user?.avatar_url || (user?.avatar && (user.avatar.startsWith('data:') || user.avatar.startsWith('http') || user.avatar.startsWith('/')) ? user.avatar : "/dorme-dorme-precioso-capa.png");
 
   return (
     <div className="min-h-screen bg-[#0A1628] text-white pb-32 animate-fadeIn font-sans">
@@ -569,7 +569,7 @@ export default function ProfilePage() {
                     onChange={handlePhotoUpload}
                     className="hidden"
                   />
-                  {editAvatarUrl && editAvatarUrl.startsWith('data:') && (
+                  {editAvatarUrl && (editAvatarUrl.startsWith('data:') || editAvatarUrl.startsWith('http') || editAvatarUrl.startsWith('/')) && (
                     <button
                       type="button"
                       onClick={() => setEditAvatarUrl('')}

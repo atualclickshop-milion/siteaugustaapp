@@ -122,13 +122,25 @@ export default function Header() {
           {user ? (
             <button
               onClick={() => navigateTo('profile')}
+              title="Meu perfil"
               className="flex items-center gap-1.5 p-1 pl-1.5 pr-2.5 rounded-full bg-slate-100 dark:bg-night-900 border border-marian-300 dark:border-marian-500/30 text-xs text-slate-700 dark:text-slate-200 hover:border-marian-500 transition-all"
             >
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-marian-700 to-marian-500 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
-                {user.name.charAt(0)}
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-marian-700 to-marian-500 flex items-center justify-center text-white text-[11px] font-bold shadow-sm overflow-hidden">
+                {(user.avatarUrl || user.avatar_url || (user.avatar && (user.avatar.startsWith('data:') || user.avatar.startsWith('http') || user.avatar.startsWith('/')))) ? (
+                  <img 
+                    src={user.avatarUrl || user.avatar_url || user.avatar} 
+                    alt={user.name || "Perfil"} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  (user.name ? user.name.charAt(0) : 'U')
+                )}
               </div>
               <span className="hidden sm:inline font-bold text-marian-900 dark:text-slate-200 max-w-[80px] truncate">
-                {user.name.split(' ')[0]}
+                {user.name?.split(' ')[0]}
               </span>
             </button>
           ) : (

@@ -206,6 +206,8 @@ export default function Dashboard() {
     };
   };
 
+  const userAvatarImage = user?.avatarUrl || user?.avatar_url || (user?.avatar && (user.avatar.startsWith('data:') || user.avatar.startsWith('http') || user.avatar.startsWith('/')) ? user.avatar : "/dorme-dorme-precioso-capa.png");
+
   return (
     <div className="min-h-screen bg-[#0A1628] text-slate-800 dark:text-white pb-32 animate-fadeIn font-sans">
       
@@ -223,12 +225,17 @@ export default function Dashboard() {
         {/* User Profile Avatar */}
         <button
           onClick={() => navigateTo('profile')}
-          className="relative w-12 h-12 rounded-full border-2 border-amber-400/60 overflow-hidden shadow-lg shrink-0 hover:scale-105 transition-all"
+          title="Ver perfil"
+          aria-label="Ver perfil"
+          className="relative w-12 h-12 rounded-full border-2 border-amber-400/60 overflow-hidden shadow-lg shrink-0 hover:scale-105 transition-all bg-[#0A1628]"
         >
           <img 
-            src="/dorme-dorme-precioso-capa.png" 
-            alt="Perfil" 
+            src={userAvatarImage} 
+            alt={user?.name || "Perfil"} 
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = "/dorme-dorme-precioso-capa.png";
+            }}
           />
         </button>
       </div>
