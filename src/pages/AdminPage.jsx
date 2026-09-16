@@ -125,21 +125,27 @@ export default function AdminPage({ onLogout }) {
   // --- Generic File Readers & Cloud Uploaders ---
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
-  const handleImageFileUpload = (e, setterUrl) => {
+  const handleImageFileUpload = async (e, setterUrl) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setIsUploadingMedia(true);
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        setterUrl(uploadEvent.target.result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
 
-      // Upload to Supabase Storage in background for persistence
-      uploadMediaFile(file, 'covers').then(publicUrl => {
-        if (publicUrl) setterUrl(publicUrl);
-      }).catch(err => console.warn('Image storage fallback:', err))
-        .finally(() => setIsUploadingMedia(false));
+    setIsUploadingMedia(true);
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      setterUrl(uploadEvent.target.result);
+    };
+    reader.readAsDataURL(file);
+
+    try {
+      const publicUrl = await uploadMediaFile(file, 'covers');
+      if (publicUrl) {
+        setterUrl(publicUrl);
+        showFeedback('Imagem salva e sincronizada na nuvem com sucesso!');
+      }
+    } catch (err) {
+      console.warn('Image storage fallback:', err);
+    } finally {
+      setIsUploadingMedia(false);
     }
   };
 
@@ -1127,6 +1133,7 @@ export default function AdminPage({ onLogout }) {
         setBookCoverMode={setBookCoverMode}
         handleSaveBook={handleSaveBook}
         handleImageFileUpload={handleImageFileUpload}
+        isUploadingMedia={isUploadingMedia}
 
         isSongModalOpen={isSongModalOpen}
         setIsSongModalOpen={setIsSongModalOpen}

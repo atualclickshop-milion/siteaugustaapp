@@ -57,6 +57,7 @@ export default function AdminModals(props) {
     setBookCoverMode,
     handleSaveBook,
     handleImageFileUpload,
+    isUploadingMedia,
 
     // Song Modal
     isSongModalOpen,
@@ -292,11 +293,18 @@ export default function AdminModals(props) {
                   />
                 )}
 
+                {isUploadingMedia && (
+                  <div className="mt-2.5 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2 text-xs text-amber-700 font-medium animate-pulse">
+                    <div className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span>Enviando capa para o servidor... Aguarde a conclusão antes de salvar.</span>
+                  </div>
+                )}
+
                 {bookCover && (
                   <div className="mt-3 flex items-center justify-between gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-3 min-w-0">
                       <img src={bookCover} alt="Preview" className="w-12 h-12 object-cover rounded-lg shadow-sm" />
-                      <span className="text-xs text-slate-600 truncate">{bookCover.startsWith('data:') ? 'Arquivo de imagem carregado' : bookCover}</span>
+                      <span className="text-xs text-slate-600 truncate">{bookCover.startsWith('data:') ? 'Enviando arquivo...' : bookCover}</span>
                     </div>
                     <button
                       type="button"
@@ -321,9 +329,21 @@ export default function AdminModals(props) {
               <button
                 type="button"
                 onClick={handleSaveBook}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 rounded-xl shadow-md shadow-amber-500/20 transition-all"
+                disabled={isUploadingMedia}
+                className={`px-5 py-2.5 text-sm font-semibold rounded-xl shadow-md transition-all flex items-center gap-2 ${
+                  isUploadingMedia
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 shadow-amber-500/20 cursor-pointer'
+                }`}
               >
-                Salvar Livro
+                {isUploadingMedia ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" />
+                    <span>Enviando Capa...</span>
+                  </>
+                ) : (
+                  'Salvar Livro'
+                )}
               </button>
             </div>
           </div>
@@ -580,9 +600,21 @@ export default function AdminModals(props) {
               <button
                 type="button"
                 onClick={handleSaveSong}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 rounded-xl shadow-md shadow-amber-500/20 transition-all"
+                disabled={isUploadingMedia}
+                className={`px-5 py-2.5 text-sm font-semibold rounded-xl shadow-md transition-all flex items-center gap-2 ${
+                  isUploadingMedia
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 shadow-amber-500/20 cursor-pointer'
+                }`}
               >
-                Salvar Música
+                {isUploadingMedia ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" />
+                    <span>Enviando Mídia...</span>
+                  </>
+                ) : (
+                  'Salvar Música'
+                )}
               </button>
             </div>
           </div>
@@ -811,9 +843,21 @@ export default function AdminModals(props) {
               <button
                 type="button"
                 onClick={handleSaveChapter}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 rounded-xl shadow-md shadow-amber-500/20 transition-all"
+                disabled={isUploadingMedia}
+                className={`px-5 py-2.5 text-sm font-semibold rounded-xl shadow-md transition-all flex items-center gap-2 ${
+                  isUploadingMedia
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 shadow-amber-500/20 cursor-pointer'
+                }`}
               >
-                Salvar Capítulo
+                {isUploadingMedia ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" />
+                    <span>Enviando Mídia...</span>
+                  </>
+                ) : (
+                  'Salvar Capítulo'
+                )}
               </button>
             </div>
           </div>
@@ -1053,9 +1097,21 @@ export default function AdminModals(props) {
               <button
                 type="button"
                 onClick={handleSavePrayer}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 rounded-xl shadow-md shadow-amber-500/20 transition-all"
+                disabled={isUploadingMedia}
+                className={`px-5 py-2.5 text-sm font-semibold rounded-xl shadow-md transition-all flex items-center gap-2 ${
+                  isUploadingMedia
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 shadow-amber-500/20 cursor-pointer'
+                }`}
               >
-                Salvar Oração
+                {isUploadingMedia ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" />
+                    <span>Enviando Mídia...</span>
+                  </>
+                ) : (
+                  'Salvar Oração'
+                )}
               </button>
             </div>
           </div>
@@ -1430,9 +1486,21 @@ export default function AdminModals(props) {
               <button
                 type="button"
                 onClick={handleSaveMoment}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 rounded-xl shadow-md shadow-amber-500/20 transition-all"
+                disabled={isUploadingMedia}
+                className={`px-5 py-2.5 text-sm font-semibold rounded-xl shadow-md transition-all flex items-center gap-2 ${
+                  isUploadingMedia
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 shadow-amber-500/20 cursor-pointer'
+                }`}
               >
-                Salvar Momento
+                {isUploadingMedia ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" />
+                    <span>Enviando Mídia...</span>
+                  </>
+                ) : (
+                  'Salvar Momento'
+                )}
               </button>
             </div>
           </div>

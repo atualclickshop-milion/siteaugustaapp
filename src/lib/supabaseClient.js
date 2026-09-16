@@ -36,7 +36,7 @@ export async function fetchAudiobooksFromDB() {
       title: b.title,
       subtitle: b.subtitle,
       description: b.description,
-      coverUrl: b.cover_url,
+      coverUrl: b.cover_url || '/dorme-dorme-precioso-capa.png',
       author: b.author,
       totalDuration: b.total_duration,
       category: b.category,
@@ -51,6 +51,7 @@ export async function fetchAudiobooksFromDB() {
           subtitle: c.subtitle,
           duration: c.duration,
           audioUrl: c.audio_url,
+          coverUrl: c.cover_url || b.cover_url || '/dorme-dorme-precioso-capa.png',
           type: c.type,
           textSnippet: c.text_snippet,
           lyrics: c.lyrics
@@ -391,19 +392,31 @@ export async function saveAppSettingToDB(key, value) {
 export async function savePrayersToDB(prayersList) {
   if (!Array.isArray(prayersList)) return;
   try {
-    const rows = prayersList.map((p, idx) => ({
-      id: p.id,
-      title: p.title || 'Sem título',
-      subtitle: p.subtitle || '',
-      duration: p.duration || '04:30',
-      audio_url: p.audioUrl || '',
-      cover_url: p.coverUrl || '',
-      category: p.category || 'oração',
-      icon: p.icon || 'HeartHandshake',
-      full_text: p.fullText || '',
-      display_order: idx,
-      updated_at: new Date().toISOString()
-    }));
+    const rows = [];
+    for (let idx = 0; idx < prayersList.length; idx++) {
+      const p = prayersList[idx];
+      let finalCover = p.coverUrl || '';
+      if (finalCover.startsWith('data:image')) {
+        const uploaded = await uploadBase64ImageToStorage(finalCover, 'covers');
+        if (uploaded && !uploaded.startsWith('data:')) {
+          finalCover = uploaded;
+          p.coverUrl = uploaded;
+        }
+      }
+      rows.push({
+        id: p.id,
+        title: p.title || 'Sem título',
+        subtitle: p.subtitle || '',
+        duration: p.duration || '04:30',
+        audio_url: p.audioUrl || '',
+        cover_url: finalCover,
+        category: p.category || 'oração',
+        icon: p.icon || 'HeartHandshake',
+        full_text: p.fullText || '',
+        display_order: idx,
+        updated_at: new Date().toISOString()
+      });
+    }
     const { error } = await supabase
       .from('prayers')
       .upsert(rows, { onConflict: 'id' });
@@ -416,21 +429,33 @@ export async function savePrayersToDB(prayersList) {
 export async function saveMomentsToDB(momentsList) {
   if (!Array.isArray(momentsList)) return;
   try {
-    const rows = momentsList.map((m, idx) => ({
-      id: m.id,
-      title: m.title || 'Momento',
-      badge: m.badge || '',
-      description: m.description || '',
-      action_text: m.actionText || 'Ouvir & Acalmar',
-      icon: m.icon || '',
-      icon_bg: m.iconBg || '',
-      cover_url: m.coverUrl || '',
-      audio_url: m.audioUrl || '',
-      text_snippet: m.textSnippet || '',
-      duration: m.duration || '04:30',
-      enabled: m.enabled !== false,
-      display_order: idx
-    }));
+    const rows = [];
+    for (let idx = 0; idx < momentsList.length; idx++) {
+      const m = momentsList[idx];
+      let finalCover = m.coverUrl || '';
+      if (finalCover.startsWith('data:image')) {
+        const uploaded = await uploadBase64ImageToStorage(finalCover, 'covers');
+        if (uploaded && !uploaded.startsWith('data:')) {
+          finalCover = uploaded;
+          m.coverUrl = uploaded;
+        }
+      }
+      rows.push({
+        id: m.id,
+        title: m.title || 'Momento',
+        badge: m.badge || '',
+        description: m.description || '',
+        action_text: m.actionText || 'Ouvir & Acalmar',
+        icon: m.icon || '',
+        icon_bg: m.iconBg || '',
+        cover_url: finalCover,
+        audio_url: m.audioUrl || '',
+        text_snippet: m.textSnippet || '',
+        duration: m.duration || '04:30',
+        enabled: m.enabled !== false,
+        display_order: idx
+      });
+    }
     const { error } = await supabase
       .from('moments')
       .upsert(rows, { onConflict: 'id' });
@@ -458,9 +483,15 @@ export async function saveAudiobooksToDB(audiobooksList) {
   try {
     for (let idx = 0; idx < audiobooksList.length; idx++) {
       const b = audiobooksList[idx];
-      const safeBookCoverUrl = (b.coverUrl && b.coverUrl.length > 100000 && b.coverUrl.startsWith('data:'))
-        ? '' // Do not sync giant local Base64 images to DB string columns
-        : (b.coverUrl || '');
+
+      let safeBookCoverUrl = b.coverUrl || '';
+      if (safeBookCoverUrl.startsWith('data:image')) {
+        const uploaded = await uploadBase64ImageToStorage(safeBookCoverUrl, 'covers');
+        if (uploaded && !uploaded.startsWith('data:')) {
+          safeBookCoverUrl = uploaded;
+          b.coverUrl = uploaded;
+        }
+      }
 
       const bookRow = {
         id: b.id,
@@ -482,14 +513,18 @@ export async function saveAudiobooksToDB(audiobooksList) {
       if (Array.isArray(b.chapters) && b.chapters.length > 0) {
         for (let chIdx = 0; chIdx < b.chapters.length; chIdx++) {
           const ch = b.chapters[chIdx];
-          // Truncate huge Base64 audio strings if present to avoid 57014 statement timeout
           const safeAudioUrl = (ch.audioUrl && ch.audioUrl.length > 100000 && ch.audioUrl.startsWith('data:'))
-            ? '' // Do not sync giant local Base64 audio to DB string columns
+            ? ''
             : (ch.audioUrl || '');
 
-          const safeCoverUrl = (ch.coverUrl && ch.coverUrl.length > 100000 && ch.coverUrl.startsWith('data:'))
-            ? ''
-            : (ch.coverUrl || '');
+          let safeCoverUrl = ch.coverUrl || '';
+          if (safeCoverUrl.startsWith('data:image')) {
+            const uploadedCh = await uploadBase64ImageToStorage(safeCoverUrl, 'covers');
+            if (uploadedCh && !uploadedCh.startsWith('data:')) {
+              safeCoverUrl = uploadedCh;
+              ch.coverUrl = uploadedCh;
+            }
+          }
 
           const chRow = {
             id: ch.id,
@@ -499,6 +534,7 @@ export async function saveAudiobooksToDB(audiobooksList) {
             subtitle: ch.subtitle || '',
             duration: ch.duration || '05:00',
             audio_url: safeAudioUrl,
+            cover_url: safeCoverUrl,
             type: ch.type || 'meditation',
             text_snippet: ch.textSnippet || '',
             lyrics: Array.isArray(ch.lyrics) ? ch.lyrics.join('\n') : (ch.lyrics || ''),
@@ -524,6 +560,15 @@ export async function saveAudiobooksToDB(audiobooksList) {
 export async function saveSpecialSongToDB(songObj) {
   if (!songObj || !songObj.id) return;
   try {
+    let finalSongCover = songObj.coverUrl || '';
+    if (finalSongCover.startsWith('data:image')) {
+      const uploaded = await uploadBase64ImageToStorage(finalSongCover, 'covers');
+      if (uploaded && !uploaded.startsWith('data:')) {
+        finalSongCover = uploaded;
+        songObj.coverUrl = uploaded;
+      }
+    }
+
     const row = {
       id: songObj.id,
       title: songObj.title || 'Dorme, Dorme, Precioso',
@@ -531,7 +576,7 @@ export async function saveSpecialSongToDB(songObj) {
       author: songObj.author || 'Augusta',
       duration: songObj.duration || '03:45',
       audio_url: (songObj.audioUrl && songObj.audioUrl.length > 100000 && songObj.audioUrl.startsWith('data:')) ? '' : (songObj.audioUrl || ''),
-      cover_url: (songObj.coverUrl && songObj.coverUrl.length > 100000 && songObj.coverUrl.startsWith('data:')) ? '' : (songObj.coverUrl || ''),
+      cover_url: finalSongCover,
       tagline: songObj.tagline || '',
       description: songObj.description || '',
       highlight: songObj.highlight !== false,
@@ -705,11 +750,103 @@ export async function incrementAdMetricInDB(adId, metricType) {
   }
 }
 
-// 14. Upload Audio & Image to Supabase Storage
+// 14. Image Compression Helper (Converts heavy mobile photos into ~120KB WebP)
+export async function compressImageFile(file, maxWidth = 1200, maxHeight = 1200, quality = 0.85) {
+  if (typeof window === 'undefined' || !file || !file.type || !file.type.startsWith('image/')) return file;
+  if (file.type === 'image/svg+xml' || file.type === 'image/gif') return file;
+
+  return new Promise((resolve) => {
+    try {
+      const img = new window.Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        let { width, height } = img;
+        if (width <= maxWidth && height <= maxHeight && file.size < 400 * 1024) {
+          resolve(file);
+          return;
+        }
+
+        const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const baseName = (file.name || 'image').replace(/\.[^/.]+$/, "");
+          const compressedFile = new File([blob], `${baseName}.webp`, {
+            type: 'image/webp',
+            lastModified: Date.now()
+          });
+          resolve(compressedFile);
+        }, 'image/webp', quality);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+      img.src = objectUrl;
+    } catch (e) {
+      resolve(file);
+    }
+  });
+}
+
+// 15. Upload Base64 Data URL to Supabase Storage (Safe Cloud Bridge)
+export async function uploadBase64ImageToStorage(dataUrl, folder = 'covers') {
+  if (!dataUrl || typeof dataUrl !== 'string') return '';
+  if (!dataUrl.startsWith('data:image')) return dataUrl; // Already a clean URL
+
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const mimeType = blob.type || 'image/jpeg';
+    const ext = mimeType.split('/')[1] || 'jpg';
+    const cleanFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const filePath = `${folder}/${cleanFileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('app-media')
+      .upload(filePath, blob, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: mimeType
+      });
+
+    if (!error && data) {
+      const { data: publicUrlData } = supabase.storage
+        .from('app-media')
+        .getPublicUrl(filePath);
+
+      if (publicUrlData?.publicUrl) {
+        return publicUrlData.publicUrl;
+      }
+    }
+  } catch (err) {
+    console.warn('Error uploading base64 to Supabase storage:', err);
+  }
+  return dataUrl;
+}
+
+// 16. Upload Audio & Image to Supabase Storage
 export async function uploadMediaFile(file, folder = 'audios') {
   if (!file) return null;
   try {
-    const fileExt = file.name ? file.name.split('.').pop() : 'mp3';
+    let fileToUpload = file;
+    if (file.type && file.type.startsWith('image/')) {
+      fileToUpload = await compressImageFile(file);
+    }
+
+    const fileExt = fileToUpload.name ? fileToUpload.name.split('.').pop() : 'mp3';
     const cleanFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     const filePath = `${folder}/${cleanFileName}`;
 
@@ -723,18 +860,18 @@ export async function uploadMediaFile(file, folder = 'audios') {
       jpeg: 'image/jpeg',
       webp: 'image/webp'
     };
-    const mimeType = file.type || mimeMap[fileExt.toLowerCase()] || 'application/octet-stream';
+    const mimeType = fileToUpload.type || mimeMap[fileExt.toLowerCase()] || 'application/octet-stream';
 
     const { data, error } = await supabase.storage
       .from('app-media')
-      .upload(filePath, file, {
+      .upload(filePath, fileToUpload, {
         cacheControl: '3600',
         upsert: true,
         contentType: mimeType
       });
 
     if (error) {
-      console.info('[Supabase Storage] Bucket "app-media" não encontrado. Arquivo mantido e salvo localmente com segurança no IndexedDB.');
+      console.info('[Supabase Storage] Upload notice:', error);
       return null;
     }
 
@@ -746,9 +883,10 @@ export async function uploadMediaFile(file, folder = 'audios') {
       return publicUrlData?.publicUrl || null;
     }
   } catch (err) {
-    // Local IndexedDB fallback
+    console.warn('uploadMediaFile fallback error:', err);
   }
   return null;
 }
+
 
 
