@@ -534,6 +534,7 @@ export async function saveAudiobooksToDB(audiobooksList) {
             subtitle: ch.subtitle || '',
             duration: ch.duration || '05:00',
             audio_url: safeAudioUrl,
+            cover_url: safeCoverUrl || '',
             type: ch.type || 'meditation',
             text_snippet: ch.textSnippet || '',
             lyrics: Array.isArray(ch.lyrics) ? ch.lyrics.join('\n') : (ch.lyrics || ''),
