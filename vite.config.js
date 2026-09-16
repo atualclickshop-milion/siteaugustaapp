@@ -29,6 +29,15 @@ export default defineConfig({
             purpose: 'any maskable'
           }
         ]
+      },
+      workbox: {
+        navigateFallbackDenylist: [/^\/api/, /\.mp3$/, /\.wav$/, /\.m4a$/, /^https:\/\/.*\.supabase\.co/],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.origin.includes('supabase.co') || url.pathname.endsWith('.mp3') || url.pathname.endsWith('.wav') || url.pathname.endsWith('.m4a'),
+            handler: 'NetworkOnly'
+          }
+        ]
       }
     })
   ],

@@ -928,7 +928,7 @@ export function AppProvider({ children }) {
   // Initialize Audio Element ONCE on mount
   useEffect(() => {
     const audio = new Audio();
-    audio.preload = 'metadata';
+    audio.preload = 'auto';
     audioRef.current = audio;
 
     const handleError = (e) => {
@@ -1080,9 +1080,12 @@ export function AppProvider({ children }) {
     if (!audioRef.current) return;
 
     const srcToPlay = track.audioUrl;
-    audioRef.current.src = srcToPlay;
+    if (audioRef.current.src !== srcToPlay) {
+      audioRef.current.src = srcToPlay;
+    } else {
+      audioRef.current.currentTime = 0;
+    }
     audioRef.current.playbackRate = playbackRate;
-    audioRef.current.currentTime = 0;
     
     const playPromise = audioRef.current.play();
     if (playPromise !== undefined) {

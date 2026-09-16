@@ -713,11 +713,24 @@ export async function uploadMediaFile(file, folder = 'audios') {
     const cleanFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     const filePath = `${folder}/${cleanFileName}`;
 
+    const mimeMap = {
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      m4a: 'audio/mp4',
+      ogg: 'audio/ogg',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      webp: 'image/webp'
+    };
+    const mimeType = file.type || mimeMap[fileExt.toLowerCase()] || 'application/octet-stream';
+
     const { data, error } = await supabase.storage
       .from('app-media')
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: true
+        upsert: true,
+        contentType: mimeType
       });
 
     if (error) {
