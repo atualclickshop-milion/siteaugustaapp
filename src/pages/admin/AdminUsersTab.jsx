@@ -28,7 +28,6 @@ export default function AdminUsersTab({
       content += `    TELEFONE: ${u.phone || u.telefone || '—'}\n`;
       content += `    BEBÊ: ${u.babyName || '—'}\n`;
       content += `    STATUS: ${u.status === 'active' ? 'Ativa' : u.status === 'pending' ? 'Pendente' : 'Bloqueada'}\n`;
-      content += `    SENHA: ${u.password || '—'}\n`;
       content += `    DATA CADASTRO: ${u.createdAt || '—'}\n`;
       content += `----------------------------------------------------\n`;
     });
@@ -226,7 +225,7 @@ export default function AdminUsersTab({
 
                   {/* Actions Bar */}
                   <div className="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
-                    <span className="text-[10px] text-slate-400 font-mono">Senha: <strong>{u.password || '•••'}</strong></span>
+                    <span className="text-[10px] text-slate-400 font-medium">Cadastrada: <strong>{u.createdAt || 'Recente'}</strong></span>
                     <div className="flex items-center gap-1.5">
                       {u.status === 'pending' && (
                         <button onClick={() => handleQuickApproveUser(u.id)} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold cursor-pointer flex items-center gap-1 shadow-sm">
@@ -258,7 +257,7 @@ export default function AdminUsersTab({
                     <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Telefone</th>
                     <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Bebê</th>
                     <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Senha</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cadastro</th>
                     <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
@@ -291,7 +290,7 @@ export default function AdminUsersTab({
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">{u.password || '•••'}</span>
+                        <span className="text-xs text-slate-500 font-medium">{u.createdAt || 'Recente'}</span>
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1 justify-end">

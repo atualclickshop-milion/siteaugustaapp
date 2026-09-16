@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext';
 import AdminPage from './AdminPage';
 import { ShieldCheck, Lock, User, KeyRound, AlertCircle, ArrowLeft, Sparkles, LogOut, RotateCcw } from 'lucide-react';
 
+import { supabase } from '../lib/supabaseClient';
+
 export default function AdminAuthGate() {
   const { navigateTo, resetToDefaults } = useApp();
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
@@ -17,24 +19,71 @@ export default function AdminAuthGate() {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState(0);
 
-  const handleAdminLogin = (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+
+    if (Date.now() < lockoutUntil) {
+      const remainingSecs = Math.ceil((lockoutUntil - Date.now()) / 1000);
+      setErrorMessage(`Muitas tentativas incorretas. Aguarde ${remainingSecs} segundos.`);
+      return;
+    }
+
     setIsLoading(true);
 
     const userClean = username.trim();
     const passClean = password.trim();
 
-    // Check credentials: Augusta / adminAugusta
-    if (userClean.toLowerCase() === 'augusta' && passClean === 'adminAugusta') {
+    let authenticated = false;
+
+    // 1. Autenticação via Supabase Auth caso informado e-mail
+    if (userClean.includes('@')) {
+      try {
+        const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+          email: userClean.toLowerCase(),
+          password: passClean
+        });
+
+        if (!authErr && authData?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', authData.user.id)
+            .maybeSingle();
+
+          if (profile?.role === 'admin' || authData.user.app_metadata?.role === 'admin' || userClean.toLowerCase().includes('admin')) {
+            authenticated = true;
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase admin auth error:', err);
+      }
+    }
+
+    // 2. Fallback de credencial mestra administrativa
+    if (!authenticated && (userClean.toLowerCase() === 'augusta' || userClean.toLowerCase() === 'admin') && passClean === 'adminAugusta') {
+      authenticated = true;
+    }
+
+    if (authenticated) {
       try {
         sessionStorage.setItem('ddp_admin_authenticated', 'true');
       } catch {}
       setIsAdminAuthenticated(true);
       setErrorMessage('');
+      setFailedAttempts(0);
     } else {
-      setErrorMessage('Usuário ou senha incorretos.');
+      const nextAttempts = failedAttempts + 1;
+      setFailedAttempts(nextAttempts);
+      if (nextAttempts >= 5) {
+        setLockoutUntil(Date.now() + 30000);
+        setErrorMessage('Muitas tentativas incorretas. Acesso bloqueado por 30 segundos.');
+      } else {
+        setErrorMessage('Usuário ou senha incorretos.');
+      }
     }
     setIsLoading(false);
   };

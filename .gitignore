@@ -8,6 +8,11 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
 # Heavy media files at root level only
 /*.wav
 /*.mp4

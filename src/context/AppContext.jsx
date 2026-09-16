@@ -1279,22 +1279,25 @@ export function AppProvider({ children }) {
       return { success: false, message: 'Este e-mail já está cadastrado no sistema.' };
     }
 
+    // Validação de senha
+    if (!data.password || data.password.length < 6) {
+      return { success: false, message: 'A senha deve conter pelo menos 6 caracteres.' };
+    }
+
     // Register in Supabase Auth
     try {
-      if (data.password && data.password.length >= 6) {
-        const { error: authErr } = await supabase.auth.signUp({
-          email: emailNormalized,
-          password: data.password,
-          options: {
-            data: {
-              full_name: data.name || "Mamãe",
-              phone: data.phone || "",
-              baby_name: data.babyName || "Meu Bebê"
-            }
+      const { error: authErr } = await supabase.auth.signUp({
+        email: emailNormalized,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.name || "Mamãe",
+            phone: data.phone || "",
+            baby_name: data.babyName || "Meu Bebê"
           }
-        });
-        if (authErr) console.warn("Supabase auth.signUp warning:", authErr);
-      }
+        }
+      });
+      if (authErr) console.warn("Supabase auth.signUp warning:", authErr);
     } catch (err) {
       console.warn("Supabase auth.signUp error:", err);
     }
@@ -1326,7 +1329,6 @@ export function AppProvider({ children }) {
       babyName: data.babyName || "Meu Bebê",
       role: emailNormalized.includes("admin") ? "admin" : "user",
       status: isPending ? "pending" : "active",
-      password: data.password || "123",
       avatar: "marian",
       createdAt: new Date().toLocaleDateString('pt-BR')
     };
@@ -1390,29 +1392,17 @@ export function AppProvider({ children }) {
         authUserObj = authData.user;
       } else if (authErr) {
         console.info('Supabase auth.signIn response:', authErr.message);
-        // Check offline/local fallback only if user was created in local state with specific password
-        const localUser = usersList.find(u => u.email.toLowerCase() === emailNormalized);
-        if (localUser && localUser.password && localUser.password === inputPassword) {
-          authSucceeded = true;
-        } else {
-          return {
-            success: false,
-            message: 'Senha incorreta ou e-mail não encontrado. Por favor, verifique seus dados.'
-          };
-        }
+        return {
+          success: false,
+          message: 'E-mail ou senha incorretos. Por favor, verifique seus dados.'
+        };
       }
     } catch (err) {
       console.warn('Supabase auth connection error:', err);
-      // Fallback only if offline network connection failed
-      const localUser = usersList.find(u => u.email.toLowerCase() === emailNormalized);
-      if (localUser && localUser.password && localUser.password === inputPassword) {
-        authSucceeded = true;
-      } else {
-        return {
-          success: false,
-          message: 'Senha incorreta ou falha de conexão. Por favor, tente novamente.'
-        };
-      }
+      return {
+        success: false,
+        message: 'Falha na conexão com o servidor. Por favor, tente novamente.'
+      };
     }
 
     if (!authSucceeded) {

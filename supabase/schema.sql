@@ -292,18 +292,38 @@ DROP POLICY IF EXISTS "Allow All Profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Allow All Favorites" ON public.user_favorites;
 DROP POLICY IF EXISTS "Allow All Playback Progress" ON public.user_playback_progress;
 
--- Create EXACTLY ONE unified RLS policy per table (FOR ALL USING (true) WITH CHECK (true))
-CREATE POLICY "Allow All Profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Audiobooks" ON public.audiobooks FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Chapters" ON public.chapters FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Special Songs" ON public.special_songs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Prayers" ON public.prayers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Moments" ON public.moments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Announcements" ON public.announcements FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Streaming Platforms" ON public.streaming_platforms FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All App Settings" ON public.app_settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Favorites" ON public.user_favorites FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Playback Progress" ON public.user_playback_progress FOR ALL USING (true) WITH CHECK (true);
+-- ==============================================================================
+-- 3. POLÍTICAS RLS SEGURAS (LEITURA PÚBLICA / ESCRITA AUTENTICADA)
+-- ==============================================================================
+
+-- Leitura pública para tabelas de conteúdo
+CREATE POLICY "Public Read Audiobooks" ON public.audiobooks FOR SELECT USING (true);
+CREATE POLICY "Public Read Chapters" ON public.chapters FOR SELECT USING (true);
+CREATE POLICY "Public Read Special Songs" ON public.special_songs FOR SELECT USING (true);
+CREATE POLICY "Public Read Prayers" ON public.prayers FOR SELECT USING (true);
+CREATE POLICY "Public Read Moments" ON public.moments FOR SELECT USING (true);
+CREATE POLICY "Public Read Announcements" ON public.announcements FOR SELECT USING (true);
+CREATE POLICY "Public Read Streaming Platforms" ON public.streaming_platforms FOR SELECT USING (true);
+CREATE POLICY "Public Read App Settings" ON public.app_settings FOR SELECT USING (true);
+CREATE POLICY "Public Read Profiles" ON public.profiles FOR SELECT USING (true);
+
+-- Escrita de conteúdo restrita a usuários autenticados (Admin / Painel)
+CREATE POLICY "Authenticated Write Audiobooks" ON public.audiobooks FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated Write Chapters" ON public.chapters FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated Write Special Songs" ON public.special_songs FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated Write Prayers" ON public.prayers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated Write Moments" ON public.moments FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated Write Announcements" ON public.announcements FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated Write Streaming Platforms" ON public.streaming_platforms FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated Write App Settings" ON public.app_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Cadastro e sincronização de perfis de usuário
+CREATE POLICY "Allow Profile Registration" ON public.profiles FOR INSERT WITH CHECK (true);
+CREATE POLICY "Authenticated Manage Profiles" ON public.profiles FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Favoritos e progresso por usuário (leitura e gravação)
+CREATE POLICY "Allow User Favorites" ON public.user_favorites FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow User Playback Progress" ON public.user_playback_progress FOR ALL USING (true) WITH CHECK (true);
 
 -- ==============================================================================
 -- 4. STORAGE BUCKETS
@@ -321,10 +341,15 @@ DROP POLICY IF EXISTS "Public Access Storage Audios" ON storage.objects;
 DROP POLICY IF EXISTS "Allow Upload Covers" ON storage.objects;
 DROP POLICY IF EXISTS "Allow Upload Audios" ON storage.objects;
 
+-- Leitura pública para capas e áudios
 CREATE POLICY "Public Access Storage Covers" ON storage.objects FOR SELECT USING (bucket_id = 'covers');
 CREATE POLICY "Public Access Storage Audios" ON storage.objects FOR SELECT USING (bucket_id = 'audios');
-CREATE POLICY "Allow Upload Covers" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'covers');
-CREATE POLICY "Allow Upload Audios" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'audios');
+
+-- Upload e edição restritos a usuários autenticados (Admin)
+CREATE POLICY "Authenticated Upload Covers" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'covers');
+CREATE POLICY "Authenticated Upload Audios" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'audios');
+CREATE POLICY "Authenticated Manage Covers" ON storage.objects FOR ALL TO authenticated USING (bucket_id = 'covers') WITH CHECK (bucket_id = 'covers');
+CREATE POLICY "Authenticated Manage Audios" ON storage.objects FOR ALL TO authenticated USING (bucket_id = 'audios') WITH CHECK (bucket_id = 'audios');
 
 -- ==============================================================================
 -- 5. INITIAL SEED DATA
@@ -534,12 +559,24 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('app-media', 'app-media', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow All Storage app-media' AND tablename = 'objects') THEN
-        CREATE POLICY "Allow All Storage app-media" ON storage.objects 
-        FOR ALL 
-        USING (bucket_id = 'app-media') 
-        WITH CHECK (bucket_id = 'app-media');
-    END IF;
-END $$;
+DROP POLICY IF EXISTS "Allow All Storage app-media" ON storage.objects;
+DROP POLICY IF EXISTS "Public Read Storage app-media" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Upload Storage app-media" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Manage Storage app-media" ON storage.objects;
+
+-- Leitura pública para app-media
+CREATE POLICY "Public Read Storage app-media" ON storage.objects 
+FOR SELECT 
+USING (bucket_id = 'app-media');
+
+-- Upload e edição restritos a usuários autenticados (Admin)
+CREATE POLICY "Authenticated Upload Storage app-media" ON storage.objects 
+FOR INSERT 
+TO authenticated 
+WITH CHECK (bucket_id = 'app-media');
+
+CREATE POLICY "Authenticated Manage Storage app-media" ON storage.objects 
+FOR ALL 
+TO authenticated 
+USING (bucket_id = 'app-media') 
+WITH CHECK (bucket_id = 'app-media');
