@@ -534,7 +534,6 @@ export async function saveAudiobooksToDB(audiobooksList) {
             subtitle: ch.subtitle || '',
             duration: ch.duration || '05:00',
             audio_url: safeAudioUrl,
-            cover_url: safeCoverUrl,
             type: ch.type || 'meditation',
             text_snippet: ch.textSnippet || '',
             lyrics: Array.isArray(ch.lyrics) ? ch.lyrics.join('\n') : (ch.lyrics || ''),
@@ -814,7 +813,7 @@ export async function uploadBase64ImageToStorage(dataUrl, folder = 'covers') {
     const cleanFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
     const filePath = `${folder}/${cleanFileName}`;
 
-    const { data, error } = await supabase.storage
+    let { data, error } = await supabase.storage
       .from('app-media')
       .upload(filePath, blob, {
         cacheControl: '3600',
@@ -822,7 +821,23 @@ export async function uploadBase64ImageToStorage(dataUrl, folder = 'covers') {
         contentType: mimeType
       });
 
-    if (!error && data) {
+    if (error) {
+      // Fallback to 'covers' bucket
+      const fallbackBucket = folder === 'audios' ? 'audios' : 'covers';
+      const { data: fbData, error: fbErr } = await supabase.storage
+        .from(fallbackBucket)
+        .upload(cleanFileName, blob, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: mimeType
+        });
+      if (!fbErr && fbData) {
+        const { data: pubData } = supabase.storage
+          .from(fallbackBucket)
+          .getPublicUrl(cleanFileName);
+        if (pubData?.publicUrl) return pubData.publicUrl;
+      }
+    } else if (data) {
       const { data: publicUrlData } = supabase.storage
         .from('app-media')
         .getPublicUrl(filePath);
@@ -862,7 +877,7 @@ export async function uploadMediaFile(file, folder = 'audios') {
     };
     const mimeType = fileToUpload.type || mimeMap[fileExt.toLowerCase()] || 'application/octet-stream';
 
-    const { data, error } = await supabase.storage
+    let { data, error } = await supabase.storage
       .from('app-media')
       .upload(filePath, fileToUpload, {
         cacheControl: '3600',
@@ -871,7 +886,21 @@ export async function uploadMediaFile(file, folder = 'audios') {
       });
 
     if (error) {
-      console.info('[Supabase Storage] Upload notice:', error);
+      console.info('[Supabase Storage] app-media upload notice, trying bucket fallback:', error.message);
+      const fallbackBucket = folder === 'audios' ? 'audios' : 'covers';
+      const { data: fbData, error: fbErr } = await supabase.storage
+        .from(fallbackBucket)
+        .upload(cleanFileName, fileToUpload, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: mimeType
+        });
+      if (!fbErr && fbData) {
+        const { data: pubData } = supabase.storage
+          .from(fallbackBucket)
+          .getPublicUrl(cleanFileName);
+        return pubData?.publicUrl || null;
+      }
       return null;
     }
 

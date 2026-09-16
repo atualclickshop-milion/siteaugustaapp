@@ -10,7 +10,8 @@ import {
   saveAppSettingToDB,
   saveStreamingPlatformsToDB,
   saveAnnouncementsToDB,
-  deleteAnnouncementFromDB
+  deleteAnnouncementFromDB,
+  saveAudiobooksToDB
 } from '../lib/supabaseClient';
 import { idbSet } from '../utils/storageHelper';
 import { Check } from 'lucide-react';
@@ -238,6 +239,7 @@ export default function AdminPage({ onLogout }) {
       if (selectedBookForChapters?.id === editingBook.id) {
         setSelectedBookForChapters({ ...selectedBookForChapters, title: bookTitle.trim(), description: bookDescription.trim(), coverUrl: bookCover });
       }
+      saveAudiobooksToDB(updated).catch(err => console.warn('Supabase saveAudiobooks error:', err));
       showFeedback('Audiobook atualizado com sucesso!');
     } else {
       const newBook = {
@@ -249,8 +251,10 @@ export default function AdminPage({ onLogout }) {
         status: 'published',
         chapters: []
       };
-      setAudiobooks([...audiobooks, newBook]);
+      const updated = [...audiobooks, newBook];
+      setAudiobooks(updated);
       setSelectedBookForChapters(newBook);
+      saveAudiobooksToDB(updated).catch(err => console.warn('Supabase saveAudiobooks error:', err));
       showFeedback('Novo audiobook criado!');
     }
     setIsBookModalOpen(false);
