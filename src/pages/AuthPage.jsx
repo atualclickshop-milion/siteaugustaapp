@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle, Phone, CheckCircle2, Clock } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Sparkles, AlertCircle, Phone, CheckCircle2, Clock, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
 export default function AuthPage() {
-  const { loginUser, registerUser, supportSettings } = useApp();
+  const { loginUser, registerUser, supportSettings, navigateTo, user } = useApp();
   const [isRegister, setIsRegister] = useState(false);
   const [isForgot, setIsForgot] = useState(false);
   const [isPendingApproval, setIsPendingApproval] = useState(false);
@@ -105,6 +105,16 @@ export default function AuthPage() {
         
         {/* Top Hero Image Container */}
         <div className="relative w-full h-[450px] sm:h-[480px] shrink-0 overflow-hidden bg-[#061224]">
+          {/* Back button */}
+          <button
+            type="button"
+            onClick={() => navigateTo(user ? 'dashboard' : 'welcome')}
+            className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white/90 hover:text-white text-xs backdrop-blur-md border border-white/20 transition-all cursor-pointer shadow-lg"
+          >
+            <ArrowLeft size={14} />
+            <span>Voltar</span>
+          </button>
+
           <img 
             src="/nossa-senhora-header.jpg" 
             alt="Nossa Senhora segurando o bebê" 

@@ -590,6 +590,13 @@ export function AppProvider({ children }) {
   // --- Navigation / View State ---
   const [currentView, setCurrentView] = useState(() => {
     try {
+      const path = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
+      const hash = typeof window !== 'undefined' ? window.location.hash.toLowerCase() : '';
+      const search = typeof window !== 'undefined' ? window.location.search.toLowerCase() : '';
+      if (path.includes('/admin') || hash.includes('admin') || search.includes('admin')) return 'admin';
+      if (path.includes('/login') || hash.includes('login') || search.includes('login')) return 'login';
+      if (path.includes('/welcome') || hash.includes('welcome') || search.includes('welcome')) return 'welcome';
+
       const savedUser = localStorage.getItem('ddp_user');
       return savedUser ? 'dashboard' : 'welcome';
     } catch {
@@ -1240,6 +1247,21 @@ export function AppProvider({ children }) {
     }
     setCurrentView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    try {
+      if (typeof window !== 'undefined') {
+        let targetPath = '/';
+        if (view === 'login') targetPath = '/login';
+        else if (view === 'welcome') targetPath = '/welcome';
+        else if (view === 'admin') targetPath = '/admin';
+
+        if (window.location.pathname !== targetPath || window.location.hash) {
+          window.history.pushState({ view }, '', targetPath);
+        }
+      }
+    } catch (e) {
+      console.warn("History pushState warning:", e);
+    }
   };
 
   const resetToDefaults = () => {
@@ -1352,7 +1374,7 @@ export function AppProvider({ children }) {
         localStorage.removeItem('ddp_onboarding_completed');
       } catch {}
       setIsWelcomeModalOpen(true);
-      setCurrentView('dashboard');
+      navigateTo('dashboard');
       return { success: true, pending: false, user: newUser };
     } else {
       // Strictly do NOT log in if pending approval
@@ -1488,7 +1510,7 @@ export function AppProvider({ children }) {
 
     // 4. Authenticated successfully
     setUser(profile);
-    setCurrentView('dashboard');
+    navigateTo('dashboard');
     return { success: true, user: profile };
   };
 
@@ -1520,7 +1542,7 @@ export function AppProvider({ children }) {
     } catch (e) {
       console.warn("Logout cleanup warning:", e);
     }
-    setCurrentView('login');
+    navigateTo('login');
   };
 
   return (

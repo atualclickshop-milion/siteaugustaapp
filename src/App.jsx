@@ -27,7 +27,7 @@ import { Moon, BookOpen, Music, Heart, User } from 'lucide-react';
 function AppContent() {
   const { currentView, navigateTo, isPlayerVisible, currentTrack } = useApp();
 
-  // Listen for special direct URL access: #admin, /admin, or ?admin etc.
+  // Listen for browser navigation (Back / Forward) or direct URL route on mount
   useEffect(() => {
     const handleUrlRouting = () => {
       const hash = window.location.hash.toLowerCase();
@@ -51,7 +51,7 @@ function AppContent() {
       window.removeEventListener('hashchange', handleUrlRouting);
       window.removeEventListener('popstate', handleUrlRouting);
     };
-  }, [navigateTo]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Welcome / Landing page for non-authenticated visitors
   if (currentView === 'welcome') {
