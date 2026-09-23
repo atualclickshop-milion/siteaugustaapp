@@ -120,7 +120,7 @@ export default function Dashboard() {
 
   // Module visibility flags
   const showContinueListening = (homeSettings?.showContinueListening !== false) && !!activeTrackObj;
-  const showSpecialSongBanner = homeSettings?.showSpecialSongBanner !== false;
+  const showSpecialSongBanner = (homeSettings?.showSpecialSongBanner !== false) && (homeSettings?.musicTabEnabled !== false);
   const showNursingTimer = homeSettings?.showNursingTimer !== false;
   const showBreathingExercise = homeSettings?.showBreathingExercise !== false;
 
@@ -364,7 +364,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-2 mb-3.5 relative z-10">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider shadow-sm">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Canção Principal do App</span>
+                <span>{specialSong?.isFutureLaunch ? 'Lançamento Futuro • Em Breve' : 'Canção Principal do App'}</span>
               </div>
               <span className="text-[11px] text-slate-300 font-medium flex items-center gap-1">
                 <Clock className="w-3 h-3 text-slate-400" />

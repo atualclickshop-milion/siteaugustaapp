@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Moon, Sun, Sparkles, BookOpen, Music2, Heart, User, ShieldCheck, Timer } from 'lucide-react';
 
 export default function Header() {
-  const { currentView, navigateTo, user, theme, toggleTheme, setIsCustomTimerModalOpen, sleepTimerRemaining } = useApp();
+  const { currentView, navigateTo, user, theme, toggleTheme, setIsCustomTimerModalOpen, sleepTimerRemaining, homeSettings } = useApp();
   const [timeStr, setTimeStr] = useState('');
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function Header() {
   const navItems = [
     { id: 'dashboard', label: 'Início', icon: Moon },
     { id: 'library', label: 'Biblioteca', icon: BookOpen },
-    { id: 'song-special', label: 'A Canção ✨', icon: Music2, highlight: true },
+    ...(homeSettings?.musicTabEnabled !== false ? [{ id: 'song-special', label: 'A Canção ✨', icon: Music2, highlight: true }] : []),
     { id: 'prayers', label: 'Orações 🙏', icon: Sparkles },
     { id: 'profile', label: 'Perfil', icon: User },
   ];

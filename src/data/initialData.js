@@ -96,8 +96,15 @@ export const SPECIAL_SONG = {
     "Dorme, dorme, precioso.",
     "",
     "Dorme, dorme, precioso. Criador já te amou."
-  ]
+  ],
+  highlight: true,
+  isFutureLaunch: true,
+  enabled: true
 };
+
+export const INITIAL_SONGS_LIST = [
+  SPECIAL_SONG
+];
 
 export const PRAYERS_LIST = [];
 
@@ -138,7 +145,8 @@ export const INITIAL_HOME_SETTINGS = {
   showNursingTimer: true,
   showBreathingExercise: true,
   showContinueListening: true,
-  showSpecialSongBanner: true
+  showSpecialSongBanner: true,
+  musicTabEnabled: true
 };
 
 export const INITIAL_ANNOUNCEMENTS = [];

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { 
   INITIAL_AUDIOBOOKS, 
   SPECIAL_SONG, 
+  INITIAL_SONGS_LIST,
   PRAYERS_LIST, 
   ADMIN_STATS_DEFAULT, 
   INITIAL_STREAMING_PLATFORMS,
@@ -18,8 +19,12 @@ import {
   supabase,
   fetchAudiobooksFromDB,
   saveAudiobooksToDB,
+  fetchSongsFromDB,
   fetchSpecialSongFromDB,
+  saveSongsToDB,
+  saveSongToDB,
   saveSpecialSongToDB,
+  deleteSongFromDB,
   fetchStreamingPlatformsFromDB,
   saveStreamingPlatformsToDB,
   fetchPrayersFromDB,
@@ -80,6 +85,24 @@ export function AppProvider({ children }) {
       return saved ? JSON.parse(saved) : INITIAL_AUDIOBOOKS;
     } catch {
       return INITIAL_AUDIOBOOKS;
+    }
+  });
+
+  const [songsList, setSongsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ddp_songs_list');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      const savedSpecial = localStorage.getItem('ddp_special_song');
+      if (savedSpecial) {
+        const parsedSong = JSON.parse(savedSpecial);
+        return [{ ...SPECIAL_SONG, ...parsedSong, highlight: true }];
+      }
+      return INITIAL_SONGS_LIST || [SPECIAL_SONG];
+    } catch {
+      return INITIAL_SONGS_LIST || [SPECIAL_SONG];
     }
   });
 
@@ -163,7 +186,14 @@ export function AppProvider({ children }) {
   const [homeSettings, setHomeSettings] = useState(() => {
     try {
       const saved = localStorage.getItem('ddp_home_settings');
-      return saved ? JSON.parse(saved) : INITIAL_HOME_SETTINGS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...INITIAL_HOME_SETTINGS,
+          ...parsed
+        };
+      }
+      return INITIAL_HOME_SETTINGS;
     } catch {
       return INITIAL_HOME_SETTINGS;
     }
@@ -252,7 +282,7 @@ export function AppProvider({ children }) {
       isRemoteSyncRef.current = true;
       const [
         dbBooks,
-        dbSong,
+        dbSongs,
         dbPlatforms,
         dbPrayers,
         dbMoments,
@@ -261,7 +291,7 @@ export function AppProvider({ children }) {
         dbAnnouncements
       ] = await Promise.all([
         fetchAudiobooksFromDB(),
-        fetchSpecialSongFromDB(),
+        fetchSongsFromDB(),
         fetchStreamingPlatformsFromDB(),
         fetchPrayersFromDB(),
         fetchMomentsFromDB(),
@@ -294,17 +324,39 @@ export function AppProvider({ children }) {
         });
       }
 
-      if (dbSong) {
-        setSpecialSong(prev => {
-          const current = prev || {};
-          const merged = {
-            ...dbSong,
-            audioUrl: (current?.audioUrl?.startsWith('data:')) ? current.audioUrl : ((dbSong.audioUrl && dbSong.audioUrl.trim()) ? dbSong.audioUrl : (current?.audioUrl || '')),
-            coverUrl: (current?.coverUrl?.startsWith('data:')) ? current.coverUrl : (dbSong.coverUrl || current?.coverUrl || '')
-          };
-          idbSet('ddp_special_song', merged);
+      if (dbSongs !== null && dbSongs.length > 0) {
+        setSongsList(prev => {
+          const current = (prev && prev.length > 0) ? prev : [];
+          const merged = dbSongs.map(dbS => {
+            const localS = current.find(s => s.id === dbS.id);
+            if (!localS) return dbS;
+            return {
+              ...dbS,
+              audioUrl: (localS?.audioUrl?.startsWith('data:')) ? localS.audioUrl : ((dbS.audioUrl && dbS.audioUrl.trim()) ? dbS.audioUrl : (localS?.audioUrl || '')),
+              coverUrl: (localS?.coverUrl?.startsWith('data:')) ? localS.coverUrl : (dbS.coverUrl || localS?.coverUrl || ''),
+              isFutureLaunch: typeof dbS.isFutureLaunch === 'boolean' ? dbS.isFutureLaunch : localS.isFutureLaunch,
+              enabled: typeof dbS.enabled === 'boolean' ? dbS.enabled : localS.enabled
+            };
+          });
+          idbSet('ddp_songs_list', merged);
+          try { localStorage.setItem('ddp_songs_list', JSON.stringify(merged)); } catch {}
           return merged;
         });
+
+        const featuredSong = dbSongs.find(s => s.highlight) || dbSongs[0];
+        if (featuredSong) {
+          setSpecialSong(prev => {
+            const current = prev || {};
+            const merged = {
+              ...featuredSong,
+              audioUrl: (current?.audioUrl?.startsWith('data:')) ? current.audioUrl : ((featuredSong.audioUrl && featuredSong.audioUrl.trim()) ? featuredSong.audioUrl : (current?.audioUrl || '')),
+              coverUrl: (current?.coverUrl?.startsWith('data:')) ? current.coverUrl : (featuredSong.coverUrl || current?.coverUrl || '')
+            };
+            idbSet('ddp_special_song', merged);
+            try { localStorage.setItem('ddp_special_song', JSON.stringify(merged)); } catch {}
+            return merged;
+          });
+        }
       }
 
       if (dbPlatforms !== null) {
@@ -364,9 +416,19 @@ export function AppProvider({ children }) {
           try { localStorage.setItem('ddp_support_settings', JSON.stringify(dbSettings.support)); } catch {}
         }
         if (dbSettings.home) {
-          setHomeSettings(dbSettings.home);
-          idbSet('ddp_home_settings', dbSettings.home);
-          try { localStorage.setItem('ddp_home_settings', JSON.stringify(dbSettings.home)); } catch {}
+          setHomeSettings(prev => {
+            const currentVal = prev || {};
+            const merged = {
+              ...INITIAL_HOME_SETTINGS,
+              ...dbSettings.home,
+              musicTabEnabled: typeof dbSettings.home.musicTabEnabled === 'boolean'
+                ? dbSettings.home.musicTabEnabled
+                : (typeof currentVal.musicTabEnabled === 'boolean' ? currentVal.musicTabEnabled : true)
+            };
+            idbSet('ddp_home_settings', merged);
+            try { localStorage.setItem('ddp_home_settings', JSON.stringify(merged)); } catch {}
+            return merged;
+          });
         }
       }
 
@@ -399,6 +461,7 @@ export function AppProvider({ children }) {
       // 1. Instant local cache load
       const [
         savedBooks, 
+        savedSongsList,
         savedSong, 
         savedPrayers, 
         savedPlatforms, 
@@ -411,6 +474,7 @@ export function AppProvider({ children }) {
         savedAnnouncements
       ] = await Promise.all([
         idbGet('ddp_audiobooks', null),
+        idbGet('ddp_songs_list', null),
         idbGet('ddp_special_song', null),
         idbGet('ddp_prayers', null),
         idbGet('ddp_streaming_platforms', null),
@@ -424,6 +488,9 @@ export function AppProvider({ children }) {
       ]);
       if (mounted) {
         if (savedBooks) setAudiobooks(savedBooks);
+        if (savedSongsList && Array.isArray(savedSongsList) && savedSongsList.length > 0) {
+          setSongsList(savedSongsList);
+        }
         if (savedSong) {
           const updatedSong = {
             ...SPECIAL_SONG,
@@ -442,7 +509,7 @@ export function AppProvider({ children }) {
         if (savedAccess) setAccessSettings(savedAccess);
         if (savedSupport) setSupportSettings(savedSupport);
         if (savedMoments) setMomentsList(savedMoments);
-        if (savedHomeSettings) setHomeSettings(savedHomeSettings);
+        if (savedHomeSettings) setHomeSettings({ ...INITIAL_HOME_SETTINGS, ...savedHomeSettings });
         if (savedAnnouncements) {
           const clean = Array.isArray(savedAnnouncements) ? savedAnnouncements.filter(a => a && a.id !== 'ad-1') : [];
           setAnnouncements(clean);
@@ -718,6 +785,13 @@ export function AppProvider({ children }) {
     try { localStorage.setItem('ddp_audiobooks', JSON.stringify(audiobooks)); } catch {}
     saveAudiobooksToDB(audiobooks);
   }, [audiobooks]);
+
+  useEffect(() => {
+    if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
+    idbSet('ddp_songs_list', songsList);
+    try { localStorage.setItem('ddp_songs_list', JSON.stringify(songsList)); } catch {}
+    saveSongsToDB(songsList);
+  }, [songsList]);
 
   useEffect(() => {
     if (!isInitialSyncDoneRef.current || isRemoteSyncRef.current) return;
@@ -1264,8 +1338,101 @@ export function AppProvider({ children }) {
     }
   };
 
+  // --- Helper methods for Song Catalog Management ---
+  const addSong = (newSongData) => {
+    const id = newSongData.id || `song-${Date.now()}`;
+    const newSong = {
+      id,
+      title: newSongData.title || 'Nova Canção',
+      artist: newSongData.artist || 'Augusta',
+      author: newSongData.author || 'Augusta',
+      duration: newSongData.duration || '03:45',
+      audioUrl: newSongData.audioUrl || '',
+      coverUrl: newSongData.coverUrl || '/dorme-dorme-precioso-capa.png',
+      tagline: newSongData.tagline || '',
+      description: newSongData.description || '',
+      highlight: Boolean(newSongData.highlight),
+      isFutureLaunch: Boolean(newSongData.isFutureLaunch),
+      enabled: newSongData.enabled !== false,
+      releaseYear: newSongData.releaseYear || '2026',
+      streamingLinks: newSongData.streamingLinks || {},
+      youtubeUrl: newSongData.youtubeUrl || '',
+      lyrics: newSongData.lyrics || []
+    };
+
+    setSongsList(prev => {
+      let updated = [...prev];
+      if (newSong.highlight) {
+        updated = updated.map(s => ({ ...s, highlight: false }));
+        setSpecialSong(newSong);
+      }
+      return [...updated, newSong];
+    });
+    return newSong;
+  };
+
+  const updateSong = (songId, songData) => {
+    setSongsList(prev => {
+      const updated = prev.map(s => {
+        if (s.id !== songId) {
+          if (songData.highlight) {
+            return { ...s, highlight: false };
+          }
+          return s;
+        }
+        const merged = { ...s, ...songData };
+        if (merged.highlight) {
+          setSpecialSong(merged);
+        }
+        return merged;
+      });
+      return updated;
+    });
+  };
+
+  const deleteSong = (songId) => {
+    deleteSongFromDB(songId);
+    setSongsList(prev => {
+      const filtered = prev.filter(s => s.id !== songId);
+      if (specialSong?.id === songId) {
+        const nextSpecial = filtered.find(s => s.highlight) || filtered[0] || SPECIAL_SONG;
+        setSpecialSong(nextSpecial);
+      }
+      return filtered;
+    });
+  };
+
+  const toggleSongFeatured = (songId) => {
+    setSongsList(prev => {
+      const updated = prev.map(s => ({
+        ...s,
+        highlight: s.id === songId
+      }));
+      const featured = updated.find(s => s.id === songId);
+      if (featured) setSpecialSong(featured);
+      return updated;
+    });
+  };
+
+  const toggleSongLaunchStatus = (songId) => {
+    setSongsList(prev => {
+      const updated = prev.map(s => {
+        if (s.id === songId) {
+          const toggled = { ...s, isFutureLaunch: !s.isFutureLaunch };
+          if (s.id === specialSong?.id) {
+            setSpecialSong(toggled);
+          }
+          return toggled;
+        }
+        return s;
+      });
+      return updated;
+    });
+  };
+
   const resetToDefaults = () => {
     setAudiobooks(INITIAL_AUDIOBOOKS);
+    setSongsList(INITIAL_SONGS_LIST);
     setSpecialSong(SPECIAL_SONG);
     setPrayers(PRAYERS_LIST);
     setFavorites([]);
@@ -1275,6 +1442,7 @@ export function AppProvider({ children }) {
     setMomentsList(INITIAL_MOMENTS_LIST);
     setHomeSettings(INITIAL_HOME_SETTINGS);
     localStorage.removeItem('ddp_audiobooks');
+    localStorage.removeItem('ddp_songs_list');
     localStorage.removeItem('ddp_special_song');
     localStorage.removeItem('ddp_prayers');
     localStorage.removeItem('ddp_favorites');
@@ -1284,6 +1452,7 @@ export function AppProvider({ children }) {
     localStorage.removeItem('ddp_moments_list');
     localStorage.removeItem('ddp_home_settings');
     idbRemove('ddp_audiobooks');
+    idbRemove('ddp_songs_list');
     idbRemove('ddp_special_song');
     idbRemove('ddp_prayers');
     idbRemove('ddp_favorites');
@@ -1556,8 +1725,15 @@ export function AppProvider({ children }) {
       // Data
       audiobooks,
       setAudiobooks,
+      songsList,
+      setSongsList,
       specialSong,
       setSpecialSong,
+      addSong,
+      updateSong,
+      deleteSong,
+      toggleSongFeatured,
+      toggleSongLaunchStatus,
       prayers,
       setPrayers,
       streamingPlatforms,

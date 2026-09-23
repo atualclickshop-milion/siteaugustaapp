@@ -13,12 +13,16 @@ import {
   MessageCircle,
   Moon,
   Headphones,
-  Users
+  Users,
+  Rocket,
+  Clock,
+  FileText
 } from 'lucide-react';
 
 export default function SongSpecialPage() {
   const { 
     specialSong, 
+    songsList = [],
     playTrack, 
     currentTrack, 
     isPlaying, 
@@ -28,22 +32,29 @@ export default function SongSpecialPage() {
     streamingPlatforms,
     supportSettings
   } = useApp();
+  
   const [copied, setCopied] = useState(false);
+  const [selectedLyricsSong, setSelectedLyricsSong] = useState(null);
 
-  const isSongPlaying = currentTrack?.id === specialSong.id && isPlaying;
-  const isFav = isFavorite(specialSong.id);
+  const isSongPlaying = currentTrack?.id === specialSong?.id && isPlaying;
+  const isFav = isFavorite(specialSong?.id);
 
-  const handlePlaySong = () => {
-    if (currentTrack?.id === specialSong.id) {
+  // Other songs in catalog (excluding the featured song if desired, or showing other songs)
+  const activeSongs = (songsList || []).filter(s => s.enabled !== false);
+  const otherSongs = activeSongs.filter(s => s.id !== specialSong?.id);
+
+  const handlePlaySong = (songToPlay = specialSong) => {
+    if (!songToPlay) return;
+    if (currentTrack?.id === songToPlay.id) {
       togglePlay();
     } else {
       playTrack({
-        id: specialSong.id,
-        title: specialSong.title,
-        subtitle: `Por ${specialSong.artist}`,
-        coverUrl: specialSong.coverUrl,
-        audioUrl: specialSong.audioUrl,
-        durationFormatted: specialSong.duration,
+        id: songToPlay.id,
+        title: songToPlay.title,
+        subtitle: `Por ${songToPlay.artist || 'Augusta'}`,
+        coverUrl: songToPlay.coverUrl || '/dorme-dorme-precioso-capa.png',
+        audioUrl: songToPlay.audioUrl,
+        durationFormatted: songToPlay.duration || '03:45',
         type: "song"
       });
     }
@@ -57,7 +68,7 @@ export default function SongSpecialPage() {
 
   const handleWhatsAppShare = () => {
     const text = encodeURIComponent(
-      "🌙 Conheça a canção 'Dorme, Dorme, Precioso' de Augusta. Uma bênção suave para acalmar o bebê e acolher as mamães que amamentam na madrugada: " + window.location.href
+      `🌙 Conheça a canção '${specialSong?.title || 'Dorme, Dorme, Precioso'}' de Augusta. Uma bênção suave para acalmar o bebê e acolher as mamães que amamentam na madrugada: ` + window.location.href
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
@@ -100,10 +111,16 @@ export default function SongSpecialPage() {
 
   const activePlatforms = (streamingPlatforms || []).filter(p => p.enabled);
 
+  // Determine which lyrics to show (default: specialSong, or clicked other song)
+  const currentLyricsSong = selectedLyricsSong || specialSong;
+  const currentLyricsLines = Array.isArray(currentLyricsSong?.lyrics)
+    ? currentLyricsSong.lyrics
+    : (typeof currentLyricsSong?.lyrics === 'string' ? currentLyricsSong.lyrics.split('\n') : []);
+
   return (
     <div className="flex flex-col gap-8 pb-36 max-w-4xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 animate-in fade-in duration-500">
       
-      {/* 1. Header Banner */}
+      {/* 1. Header Banner: Canção Principal ou Lançamento Especial */}
       <div className="relative rounded-3xl p-6 sm:p-8 bg-white dark:bg-night-900 border border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-2xl overflow-hidden">
         
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
@@ -111,13 +128,14 @@ export default function SongSpecialPage() {
           {/* Cover Art */}
           <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-3xl overflow-hidden shadow-xl border-2 border-slate-200 dark:border-gold-400/60 shrink-0 group">
             <img 
-              src={specialSong.coverUrl || "/dorme-dorme-precioso-capa.png"} 
-              alt={specialSong.title}
+              src={specialSong?.coverUrl || "/dorme-dorme-precioso-capa.png"} 
+              alt={specialSong?.title || "Canção Especial"}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              onError={(e) => { e.currentTarget.src = "/dorme-dorme-precioso-capa.png"; }}
             />
             
             {isSongPlaying && (
-              <div className="absolute bottom-2.5 left-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md text-gold-300 text-xs font-semibold flex items-center justify-center gap-1.5">
+              <div className="absolute bottom-2.5 left-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md text-gold-300 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-lg">
                 <span className="w-1.5 h-1.5 rounded-full bg-gold-400 animate-ping"></span>
                 Em Reprodução no App
               </div>
@@ -126,28 +144,37 @@ export default function SongSpecialPage() {
 
           {/* Song Info */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left gap-2.5 flex-1">
-            <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-marian-50 dark:bg-gold-500/15 border border-marian-200 dark:border-gold-500/30 text-marian-700 dark:text-gold-300 text-xs font-bold uppercase tracking-wider">
-              <Sparkles size={12} className="text-gold-500" />
-              <span>Canção Original • Augusta</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-marian-50 dark:bg-gold-500/15 border border-marian-200 dark:border-gold-500/30 text-marian-700 dark:text-gold-300 text-xs font-bold uppercase tracking-wider">
+                <Sparkles size={12} className="text-gold-500" />
+                <span>Canção Original • {specialSong?.artist || 'Augusta'}</span>
+              </div>
+
+              {specialSong?.isFutureLaunch && (
+                <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 text-xs font-bold uppercase tracking-wider animate-pulse">
+                  <Rocket size={12} className="text-purple-500" />
+                  <span>Lançamento Futuro • Em Breve</span>
+                </div>
+              )}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-marian-900 dark:text-white tracking-tight leading-tight">
-              {specialSong.title}
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-marian-900 dark:text-white tracking-tight leading-tight font-serif">
+              {specialSong?.title || 'Dorme, Dorme, Precioso'}
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-600 dark:text-marian-200 font-medium max-w-lg leading-relaxed">
-              {specialSong.tagline}
+              {specialSong?.tagline || 'Uma canção especial de Augusta para acompanhar você e seu bebê.'}
             </p>
 
             <p className="text-xs text-slate-500 dark:text-slate-300 font-normal leading-relaxed">
-              {specialSong.description}
+              {specialSong?.description || 'Composta com toda delicadeza maternal e reverência espiritual para criar uma atmosfera de paz incondicional no quarto do bebê.'}
             </p>
 
             {/* Play Button & Favorite */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
-                onClick={handlePlaySong}
-                className="px-6 py-3 rounded-full bg-marian-900 dark:bg-gold-500 hover:bg-marian-800 text-white dark:text-night-950 font-bold text-xs shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                onClick={() => handlePlaySong(specialSong)}
+                className="px-6 py-3 rounded-full bg-marian-900 dark:bg-gold-500 hover:bg-marian-800 text-white dark:text-night-950 font-bold text-xs shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
               >
                 {isSongPlaying ? (
                   <>
@@ -157,14 +184,16 @@ export default function SongSpecialPage() {
                 ) : (
                   <>
                     <Play size={16} className="fill-current ml-0.5" />
-                    <span>Ouvir Agora no App</span>
+                    <span>
+                      {specialSong?.isFutureLaunch ? 'Ouvir Prévia no App' : 'Ouvir Agora no App'}
+                    </span>
                   </>
                 )}
               </button>
 
               <button
-                onClick={() => toggleFavorite(specialSong.id)}
-                className={`p-3 rounded-full border transition-all ${
+                onClick={() => toggleFavorite(specialSong?.id)}
+                className={`p-3 rounded-full border transition-all cursor-pointer ${
                   isFav 
                     ? 'bg-rose-50 dark:bg-rose-500/20 text-rose-500 border-rose-300 dark:border-rose-500/40' 
                     : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:text-rose-500'
@@ -173,6 +202,18 @@ export default function SongSpecialPage() {
               >
                 <Heart size={16} className={isFav ? 'fill-rose-500' : ''} />
               </button>
+
+              <button
+                onClick={() => {
+                  setSelectedLyricsSong(specialSong);
+                  const el = document.getElementById('song-lyrics-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="px-4 py-3 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <FileText size={15} />
+                <span>Ver Letra</span>
+              </button>
             </div>
 
           </div>
@@ -180,7 +221,111 @@ export default function SongSpecialPage() {
         </div>
       </div>
 
-      {/* 2. 🌟 STREAMING PLATFORMS CONVERSION HUB */}
+      {/* 2. CATÁLOGO DE OUTRAS MÚSICAS & CANÇÕES */}
+      {otherSongs.length > 0 && (
+        <section className="flex flex-col gap-4 p-5 sm:p-7 rounded-3xl bg-white dark:bg-night-900 border border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
+            <div>
+              <div className="flex items-center gap-1.5 text-marian-600 dark:text-gold-400 text-xs font-bold uppercase tracking-wider">
+                <Music size={14} />
+                <span>Repertório & Acalento</span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-marian-900 dark:text-white mt-0.5">
+                Mais Canções de Ninar
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs font-normal">
+              Melodias suaves selecionadas para embalar o sono e acolher o descanso.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+            {otherSongs.map((song) => {
+              const isPlayingThis = currentTrack?.id === song.id && isPlaying;
+              const isThisFav = isFavorite(song.id);
+
+              return (
+                <div 
+                  key={song.id}
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-night-950/60 border border-slate-200/80 dark:border-white/10 hover:border-gold-400/40 transition-all flex items-center justify-between gap-3 group shadow-xs"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    {/* Cover with Play Icon */}
+                    <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-xs border border-slate-200 dark:border-white/10">
+                      <img 
+                        src={song.coverUrl || "/dorme-dorme-precioso-capa.png"} 
+                        alt={song.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        onError={(e) => { e.currentTarget.src = "/dorme-dorme-precioso-capa.png"; }}
+                      />
+                      <button
+                        onClick={() => handlePlaySong(song)}
+                        className="absolute inset-0 bg-black/40 hover:bg-black/50 transition-colors flex items-center justify-center cursor-pointer"
+                        title={isPlayingThis ? "Pausar" : "Ouvir"}
+                      >
+                        {isPlayingThis ? (
+                          <Pause size={18} className="text-amber-400 fill-current" />
+                        ) : (
+                          <Play size={18} className="text-white fill-current ml-0.5" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {song.title}
+                        </h4>
+                        {song.isFutureLaunch && (
+                          <span className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[9px] font-bold">
+                            Em Breve
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                        Por {song.artist || 'Augusta'}
+                      </span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5 font-mono">
+                        <Clock size={11} /> {song.duration || '03:45'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => toggleFavorite(song.id)}
+                      className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                        isThisFav 
+                          ? 'bg-rose-50 dark:bg-rose-500/20 text-rose-500 border-rose-300 dark:border-rose-500/40' 
+                          : 'bg-white dark:bg-white/5 text-slate-400 hover:text-rose-500 border-slate-200 dark:border-white/10'
+                      }`}
+                      title="Favoritar"
+                    >
+                      <Heart size={14} className={isThisFav ? 'fill-current' : ''} />
+                    </button>
+
+                    {song.lyrics && (
+                      <button
+                        onClick={() => {
+                          setSelectedLyricsSong(song);
+                          const el = document.getElementById('song-lyrics-section');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="p-2 rounded-xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
+                        title="Ver Letra desta música"
+                      >
+                        <FileText size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* 3. 🌟 STREAMING PLATFORMS CONVERSION HUB */}
       <section className="flex flex-col gap-3.5 p-5 sm:p-7 rounded-3xl bg-white dark:bg-night-900 border border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
           <div>
@@ -230,7 +375,7 @@ export default function SongSpecialPage() {
           <span>Ajude a levar essa canção a mais corações maternos.</span>
           <button
             onClick={handleCopyLink}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors font-medium text-xs"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors font-medium text-xs cursor-pointer"
           >
             {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
             <span>{copied ? 'Link Copiado!' : 'Copiar Link da Canção'}</span>
@@ -238,7 +383,7 @@ export default function SongSpecialPage() {
         </div>
       </section>
 
-      {/* 3. 💬 COMUNIDADE DE MÃES & SUPORTE NO WHATSAPP */}
+      {/* 4. 💬 COMUNIDADE DE MÃES & SUPORTE NO WHATSAPP */}
       <section className="flex flex-col gap-3.5 p-5 sm:p-7 rounded-3xl bg-white dark:bg-night-900 border border-slate-200/80 dark:border-emerald-500/20 shadow-sm dark:shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
           <div>
@@ -331,27 +476,42 @@ export default function SongSpecialPage() {
         </div>
       </section>
 
-      {/* 3. Letra Completa */}
-      <section className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-night-900 border border-slate-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center">
+      {/* 5. Letra Completa */}
+      <section 
+        id="song-lyrics-section"
+        className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-night-900 border border-slate-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center scroll-mt-24"
+      >
         <span className="text-xs uppercase font-bold tracking-widest text-marian-600 dark:text-gold-400 mb-1 flex items-center gap-1.5">
           <Moon size={14} /> Letra da Canção
         </span>
-        <h3 className="font-serif text-xl sm:text-2xl font-bold text-marian-900 dark:text-white mb-5">
-          Dorme, Dorme, Precioso
+        <h3 className="font-serif text-xl sm:text-2xl font-bold text-marian-900 dark:text-white mb-2">
+          {currentLyricsSong?.title || 'Dorme, Dorme, Precioso'}
         </h3>
+        {selectedLyricsSong && selectedLyricsSong.id !== specialSong?.id && (
+          <button
+            onClick={() => setSelectedLyricsSong(null)}
+            className="text-xs text-gold-500 hover:underline mb-4 font-medium"
+          >
+            ← Voltar para a letra de {specialSong?.title || 'Dorme, Dorme, Precioso'}
+          </button>
+        )}
 
-        <div className="font-serif text-sm text-slate-700 dark:text-slate-200 leading-loose italic max-w-lg space-y-1.5">
-          {specialSong.lyrics.map((line, idx) => (
-            line === "" ? (
-              <div key={idx} className="h-3"></div>
-            ) : (
-              <p key={idx}>{line}</p>
-            )
-          ))}
+        <div className="font-serif text-sm text-slate-700 dark:text-slate-200 leading-loose italic max-w-lg space-y-1.5 my-3">
+          {currentLyricsLines.length > 0 ? (
+            currentLyricsLines.map((line, idx) => (
+              line === "" ? (
+                <div key={idx} className="h-3"></div>
+              ) : (
+                <p key={idx}>{line}</p>
+              )
+            ))
+          ) : (
+            <p className="text-slate-400 italic">Letra não disponível no momento.</p>
+          )}
         </div>
 
         <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/10 w-full max-w-xs text-center text-xs text-slate-500 dark:text-slate-400 font-normal">
-          Composição: Augusta • Todos os direitos reservados
+          Composição: {currentLyricsSong?.artist || 'Augusta'} • Todos os direitos reservados
         </div>
       </section>
 

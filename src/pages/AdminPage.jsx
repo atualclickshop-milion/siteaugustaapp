@@ -33,8 +33,15 @@ export default function AdminPage({ onLogout }) {
   const { 
     audiobooks, 
     setAudiobooks, 
+    songsList,
+    setSongsList,
     specialSong, 
     setSpecialSong, 
+    addSong,
+    updateSong,
+    deleteSong,
+    toggleSongFeatured,
+    toggleSongLaunchStatus,
     prayers,
     setPrayers,
     momentsList,
@@ -382,33 +389,105 @@ export default function AdminPage({ onLogout }) {
     });
   };
 
-  // --- Special Song State & Handlers ---
+  // --- Song Catalog State & Handlers ---
   const [isSongModalOpen, setIsSongModalOpen] = useState(false);
-  const [songTitle, setSongTitle] = useState(specialSong.title);
-  const [songArtist, setSongArtist] = useState(specialSong.artist);
-  const [songTagline, setSongTagline] = useState(specialSong.tagline || '');
-  const [songCover, setSongCover] = useState(specialSong.coverUrl || '/dorme-dorme-precioso-capa.png');
+  const [editingSongId, setEditingSongId] = useState(null);
+  const [songTitle, setSongTitle] = useState('');
+  const [songArtist, setSongArtist] = useState('Augusta');
+  const [songTagline, setSongTagline] = useState('');
+  const [songCover, setSongCover] = useState('/dorme-dorme-precioso-capa.png');
   const [songCoverMode, setSongCoverMode] = useState('upload');
-  const [songAudioUrl, setSongAudioUrl] = useState(specialSong.audioUrl);
+  const [songAudioUrl, setSongAudioUrl] = useState('');
   const [songAudioMode, setSongAudioMode] = useState('url');
-  const [songDuration, setSongDuration] = useState(specialSong.duration || '03:45');
-  const [songLyricsText, setSongLyricsText] = useState(specialSong.lyrics || '');
+  const [songDuration, setSongDuration] = useState('03:45');
+  const [songLyricsText, setSongLyricsText] = useState('');
+  const [songHighlight, setSongHighlight] = useState(false);
+  const [songIsFutureLaunch, setSongIsFutureLaunch] = useState(false);
+  const [songEnabled, setSongEnabled] = useState(true);
+
+  const handleOpenNewSong = () => {
+    setEditingSongId(null);
+    setSongTitle('');
+    setSongArtist('Augusta');
+    setSongTagline('');
+    setSongCover('/dorme-dorme-precioso-capa.png');
+    setSongCoverMode('upload');
+    setSongAudioUrl('');
+    setSongAudioMode('url');
+    setSongDuration('03:45');
+    setSongLyricsText('');
+    setSongHighlight(false);
+    setSongIsFutureLaunch(false);
+    setSongEnabled(true);
+    setIsSongModalOpen(true);
+  };
+
+  const handleStartEditSong = (song) => {
+    if (!song) return;
+    setEditingSongId(song.id);
+    setSongTitle(song.title || '');
+    setSongArtist(song.artist || 'Augusta');
+    setSongTagline(song.tagline || '');
+    setSongCover(song.coverUrl || '/dorme-dorme-precioso-capa.png');
+    setSongCoverMode(song.coverUrl?.startsWith('http') ? 'url' : 'upload');
+    setSongAudioUrl(song.audioUrl || '');
+    setSongAudioMode(song.audioUrl?.startsWith('http') ? 'url' : 'upload');
+    setSongDuration(song.duration || '03:45');
+    setSongLyricsText(Array.isArray(song.lyrics) ? song.lyrics.join('\n') : (song.lyrics || ''));
+    setSongHighlight(Boolean(song.highlight) || song.id === specialSong?.id);
+    setSongIsFutureLaunch(Boolean(song.isFutureLaunch));
+    setSongEnabled(song.enabled !== false);
+    setIsSongModalOpen(true);
+  };
+
+  const handleDeleteSong = (songId) => {
+    if (songsList.length <= 1) {
+      alert('É necessário manter pelo menos uma música cadastrada no aplicativo.');
+      return;
+    }
+    if (confirm('Tem certeza que deseja excluir esta música do catálogo?')) {
+      deleteSong(songId);
+      showFeedback('Música removida do catálogo.');
+    }
+  };
+
+  const handleToggleSongActive = (songId) => {
+    const target = songsList.find(s => s.id === songId);
+    if (target) {
+      updateSong(songId, { enabled: target.enabled === false });
+      showFeedback(`Música ${target.enabled === false ? 'ativada' : 'ocultada'}.`);
+    }
+  };
 
   const handleSaveSong = (e) => {
-    e.preventDefault();
-    const updated = {
-      ...specialSong,
+    if (e && e.preventDefault) e.preventDefault();
+    if (!songTitle.trim()) {
+      alert('Por favor, informe o título da canção.');
+      return;
+    }
+
+    const lyricsArray = songLyricsText ? songLyricsText.split('\n') : [];
+    const songData = {
       title: songTitle.trim(),
-      artist: songArtist.trim(),
+      artist: songArtist.trim() || 'Augusta',
       tagline: songTagline.trim(),
-      coverUrl: songCover,
+      coverUrl: songCover || '/dorme-dorme-precioso-capa.png',
       audioUrl: songAudioUrl.trim(),
-      duration: songDuration,
-      lyrics: songLyricsText
+      duration: songDuration || '03:45',
+      lyrics: lyricsArray,
+      highlight: Boolean(songHighlight),
+      isFutureLaunch: Boolean(songIsFutureLaunch),
+      enabled: songEnabled !== false
     };
-    setSpecialSong(updated);
+
+    if (editingSongId) {
+      updateSong(editingSongId, songData);
+      showFeedback('Música atualizada com sucesso!');
+    } else {
+      addSong(songData);
+      showFeedback('Nova música cadastrada com sucesso!');
+    }
     setIsSongModalOpen(false);
-    showFeedback('Canção Especial e letra salvas com sucesso!');
   };
 
   // --- Moments State & Handlers ---
@@ -537,12 +616,37 @@ export default function AdminPage({ onLogout }) {
     }
   }, [homeSettings]);
 
-  const handleToggleHomeSetting = (key) => {
-    setLocalHomeSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleToggleHomeSetting = async (key) => {
+    const updated = {
+      ...localHomeSettings,
+      [key]: localHomeSettings[key] === false ? true : false
+    };
+    setLocalHomeSettings(updated);
+    setHomeSettings(updated);
+    try { localStorage.setItem('ddp_home_settings', JSON.stringify(updated)); } catch {}
+    await idbSet('ddp_home_settings', updated);
+    await saveAppSettingToDB('home', updated);
+    showFeedback(`Configuração atualizada!`);
+  };
+
+  const handleToggleMusicTab = async () => {
+    const isCurrentlyActive = localHomeSettings?.musicTabEnabled !== false;
+    const nextVal = !isCurrentlyActive;
+    const updated = {
+      ...localHomeSettings,
+      musicTabEnabled: nextVal
+    };
+    setLocalHomeSettings(updated);
+    setHomeSettings(updated);
+    try { localStorage.setItem('ddp_home_settings', JSON.stringify(updated)); } catch {}
+    await idbSet('ddp_home_settings', updated);
+    await saveAppSettingToDB('home', updated);
+    showFeedback(nextVal ? 'Aba de Músicas ATIVADA no aplicativo!' : 'Aba de Músicas DESATIVADA no aplicativo!');
   };
 
   const handleSaveHomeSettings = async () => {
     setHomeSettings(localHomeSettings);
+    try { localStorage.setItem('ddp_home_settings', JSON.stringify(localHomeSettings)); } catch {}
     await idbSet('ddp_home_settings', localHomeSettings);
     await saveAppSettingToDB('home', localHomeSettings);
     showFeedback('Configurações da Tela Inicial salvas com sucesso!');
@@ -1033,11 +1137,20 @@ export default function AdminPage({ onLogout }) {
         />
       )}
 
-      {/* Tab 4: Special Song */}
+      {/* Tab 4: Special Song & Catalog */}
       {activeTab === 'songs' && (
         <AdminSongTab 
           specialSong={specialSong}
-          setIsSongModalOpen={setIsSongModalOpen}
+          songsList={songsList}
+          localHomeSettings={localHomeSettings}
+          handleToggleHomeSetting={handleToggleHomeSetting}
+          handleToggleMusicTab={handleToggleMusicTab}
+          handleOpenNewSong={handleOpenNewSong}
+          handleStartEditSong={handleStartEditSong}
+          handleDeleteSong={handleDeleteSong}
+          handleToggleSongLaunch={toggleSongLaunchStatus}
+          handleToggleSongFeatured={toggleSongFeatured}
+          handleToggleSongActive={handleToggleSongActive}
           testAudioSrc={testAudioSrc}
           isTestingAudio={isTestingAudio}
           toggleTestPlay={toggleTestPlay}
@@ -1159,6 +1272,13 @@ export default function AdminPage({ onLogout }) {
         setSongDuration={setSongDuration}
         songLyricsText={songLyricsText}
         setSongLyricsText={setSongLyricsText}
+        songHighlight={songHighlight}
+        setSongHighlight={setSongHighlight}
+        songIsFutureLaunch={songIsFutureLaunch}
+        setSongIsFutureLaunch={setSongIsFutureLaunch}
+        songEnabled={songEnabled}
+        setSongEnabled={setSongEnabled}
+        editingSong={Boolean(editingSongId)}
         handleSaveSong={handleSaveSong}
         handleAudioFileUpload={handleAudioFileUpload}
         detectAudioDuration={detectAudioDuration}

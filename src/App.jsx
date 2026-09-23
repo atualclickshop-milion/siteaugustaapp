@@ -25,7 +25,7 @@ import WelcomePage from './pages/WelcomePage';
 import { Moon, BookOpen, Music, Heart, User } from 'lucide-react';
 
 function AppContent() {
-  const { currentView, navigateTo, isPlayerVisible, currentTrack } = useApp();
+  const { currentView, navigateTo, isPlayerVisible, currentTrack, homeSettings, user } = useApp();
 
   // Listen for browser navigation (Back / Forward) or direct URL route on mount
   useEffect(() => {
@@ -68,6 +68,8 @@ function AppContent() {
     return <AuthPage />;
   }
 
+  const isMusicDisabledForUser = homeSettings?.musicTabEnabled === false && user?.role !== 'admin';
+
   return (
     <div className="min-h-screen bg-[#0A1628] text-slate-800 flex flex-col justify-between relative selection:bg-amber-500 selection:text-slate-900 transition-colors duration-300 font-sans">
       
@@ -79,7 +81,28 @@ function AppContent() {
         {currentView === 'dashboard' && <Dashboard />}
         {currentView === 'library' && <Library />}
         {currentView === 'audiobook-detail' && <AudiobookDetail />}
-        {currentView === 'song-special' && <SongSpecialPage />}
+        {currentView === 'song-special' && (
+          isMusicDisabledForUser ? (
+            <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center text-white max-w-md mx-auto pt-24">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center mb-4 border border-amber-500/30 animate-pulse">
+                <Music size={32} />
+              </div>
+              <span className="text-xs uppercase font-bold tracking-widest text-amber-400 mb-2">Lançamento em Breve</span>
+              <h2 className="text-2xl font-bold font-serif mb-3">Músicas & Canções Especiais</h2>
+              <p className="text-sm text-slate-300 leading-relaxed mb-6 font-normal">
+                Augusta está preparando com muito carinho novidades musicais e melodias de acolhimento para o seu bebê. Em breve estará disponível!
+              </p>
+              <button
+                onClick={() => navigateTo('dashboard')}
+                className="px-6 py-2.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs shadow-md transition-all active:scale-95"
+              >
+                Voltar ao Início
+              </button>
+            </div>
+          ) : (
+            <SongSpecialPage />
+          )
+        )}
         {currentView === 'prayers' && <PrayersPage />}
         {currentView === 'profile' && <ProfilePage />}
       </main>
@@ -115,7 +138,7 @@ function AppContent() {
         {[
           { id: 'dashboard', label: 'Início', icon: Moon },
           { id: 'library', label: 'Biblioteca', icon: BookOpen },
-          { id: 'song-special', label: 'Música', icon: Music },
+          ...(homeSettings?.musicTabEnabled !== false ? [{ id: 'song-special', label: 'Música', icon: Music }] : []),
           { id: 'prayers', label: 'Oração', icon: Heart },
           { id: 'profile', label: 'Perfil', icon: User }
         ].map(item => {

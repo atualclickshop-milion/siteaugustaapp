@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sliders, Baby, Wind, Headphones, Sparkles, ToggleLeft, ToggleRight, Save, Plus, Play, Pause, Edit3, Trash2 } from 'lucide-react';
+import { Sliders, Baby, Wind, Headphones, Sparkles, Music, ToggleLeft, ToggleRight, Save, Plus, Play, Pause, Edit3, Trash2 } from 'lucide-react';
 
 export default function AdminHomeTab({
   localHomeSettings,
@@ -118,7 +118,27 @@ export default function AdminHomeTab({
               </div>
             </div>
             <button type="button" onClick={() => handleToggleHomeSetting('showSpecialSongBanner')} className="transition-transform active:scale-95 cursor-pointer">
-              {localHomeSettings.showSpecialSongBanner ? <ToggleRight size={32} className="text-emerald-500" /> : <ToggleLeft size={32} className="text-slate-300" />}
+              {localHomeSettings.showSpecialSongBanner !== false ? <ToggleRight size={32} className="text-emerald-500" /> : <ToggleLeft size={32} className="text-slate-300" />}
+            </button>
+          </div>
+
+          {/* Toggle 5: Aba de Músicas no App */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-purple-50 text-purple-600 border border-purple-100 shrink-0">
+                <Music size={18} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs sm:text-sm font-bold text-slate-700">
+                  Aba de Músicas no Aplicativo
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  Exibe a aba "Músicas" no menu superior e na barra móvel
+                </span>
+              </div>
+            </div>
+            <button type="button" onClick={() => handleToggleHomeSetting('musicTabEnabled')} className="transition-transform active:scale-95 cursor-pointer">
+              {localHomeSettings.musicTabEnabled !== false ? <ToggleRight size={32} className="text-emerald-500" /> : <ToggleLeft size={32} className="text-slate-300" />}
             </button>
           </div>
         </div>

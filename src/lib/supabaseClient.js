@@ -63,33 +63,53 @@ export async function fetchAudiobooksFromDB() {
   }
 }
 
-// 2. Special Song & YouTube / Streaming Links
-export async function fetchSpecialSongFromDB() {
+// 2. Special Songs & Catálogo de Músicas
+export async function fetchSongsFromDB() {
   try {
     const { data, error } = await supabase
       .from('special_songs')
       .select('*')
-      .limit(1)
-      .single();
+      .order('created_at', { ascending: true });
 
-    if (error || !data) return null;
+    if (error || !data || data.length === 0) return null;
 
-    return {
-      id: data.id,
-      title: data.title,
-      artist: data.artist,
-      author: data.author,
-      duration: data.duration,
-      audioUrl: data.audio_url,
-      coverUrl: data.cover_url,
-      tagline: data.tagline,
-      description: data.description,
-      highlight: data.highlight,
-      releaseYear: data.release_year,
-      streamingLinks: data.streaming_links || {},
-      youtubeUrl: data.youtube_url,
-      lyrics: data.lyrics || []
-    };
+    return data.map(item => ({
+      id: item.id,
+      title: item.title || 'Canção',
+      artist: item.artist || 'Augusta',
+      author: item.author || 'Augusta',
+      duration: item.duration || '03:45',
+      audioUrl: item.audio_url || '',
+      coverUrl: item.cover_url || '/dorme-dorme-precioso-capa.png',
+      tagline: item.tagline || '',
+      description: item.description || '',
+      highlight: item.highlight !== false,
+      isFutureLaunch: typeof item.is_future_launch === 'boolean'
+        ? item.is_future_launch
+        : Boolean(item.streaming_links?._meta?.isFutureLaunch),
+      enabled: typeof item.enabled === 'boolean'
+        ? item.enabled
+        : (item.streaming_links?._meta?.enabled !== false),
+      displayOrder: item.display_order ?? item.streaming_links?._meta?.displayOrder ?? 0,
+      releaseYear: item.release_year || '2026',
+      streamingLinks: item.streaming_links || {},
+      youtubeUrl: item.youtube_url || '',
+      lyrics: Array.isArray(item.lyrics) ? item.lyrics : (typeof item.lyrics === 'string' ? item.lyrics.split('\n') : [])
+    }));
+  } catch (e) {
+    console.warn('Supabase fetchSongs error:', e);
+    return null;
+  }
+}
+
+export async function fetchSpecialSongFromDB() {
+  try {
+    const all = await fetchSongsFromDB();
+    if (all && all.length > 0) {
+      const featured = all.find(s => s.highlight) || all[0];
+      return featured;
+    }
+    return null;
   } catch (e) {
     console.warn('Supabase fetchSpecialSong error:', e);
     return null;
@@ -557,7 +577,7 @@ export async function saveAudiobooksToDB(audiobooksList) {
   }
 }
 
-export async function saveSpecialSongToDB(songObj) {
+export async function saveSongToDB(songObj, displayOrder = 0) {
   if (!songObj || !songObj.id) return;
   try {
     let finalSongCover = songObj.coverUrl || '';
@@ -569,9 +589,18 @@ export async function saveSpecialSongToDB(songObj) {
       }
     }
 
+    const safeLinks = {
+      ...(songObj.streamingLinks || {}),
+      _meta: {
+        isFutureLaunch: Boolean(songObj.isFutureLaunch),
+        enabled: songObj.enabled !== false,
+        displayOrder
+      }
+    };
+
     const row = {
       id: songObj.id,
-      title: songObj.title || 'Dorme, Dorme, Precioso',
+      title: songObj.title || 'Canção',
       artist: songObj.artist || 'Augusta',
       author: songObj.author || 'Augusta',
       duration: songObj.duration || '03:45',
@@ -579,17 +608,52 @@ export async function saveSpecialSongToDB(songObj) {
       cover_url: finalSongCover,
       tagline: songObj.tagline || '',
       description: songObj.description || '',
-      highlight: songObj.highlight !== false,
+      highlight: Boolean(songObj.highlight),
+      is_future_launch: Boolean(songObj.isFutureLaunch),
+      enabled: songObj.enabled !== false,
+      display_order: displayOrder,
       release_year: songObj.releaseYear || '2026',
       lyrics: Array.isArray(songObj.lyrics) ? songObj.lyrics : (typeof songObj.lyrics === 'string' ? songObj.lyrics.split('\n') : []),
-      streaming_links: songObj.streamingLinks || {},
+      streaming_links: safeLinks,
       youtube_url: songObj.youtubeUrl || '',
       updated_at: new Date().toISOString()
     };
+
     const { error } = await supabase.from('special_songs').upsert(row, { onConflict: 'id' });
-    if (error) console.warn('Supabase saveSpecialSong error:', error);
+    if (error) {
+      console.warn('Supabase saveSongToDB initial attempt error (retrying fallback):', error);
+      delete row.is_future_launch;
+      delete row.enabled;
+      delete row.display_order;
+      await supabase.from('special_songs').upsert(row, { onConflict: 'id' });
+    }
   } catch (e) {
-    console.warn('Supabase saveSpecialSong error:', e);
+    console.warn('Supabase saveSongToDB error:', e);
+  }
+}
+
+export async function saveSpecialSongToDB(songObj) {
+  return saveSongToDB(songObj, 0);
+}
+
+export async function saveSongsToDB(songsList) {
+  if (!Array.isArray(songsList)) return;
+  try {
+    for (let idx = 0; idx < songsList.length; idx++) {
+      await saveSongToDB(songsList[idx], idx);
+    }
+  } catch (e) {
+    console.warn('Supabase saveSongsToDB error:', e);
+  }
+}
+
+export async function deleteSongFromDB(songId) {
+  if (!songId) return;
+  try {
+    const { error } = await supabase.from('special_songs').delete().eq('id', songId);
+    if (error) console.warn('Supabase deleteSongFromDB error:', error);
+  } catch (e) {
+    console.warn('Supabase deleteSongFromDB error:', e);
   }
 }
 

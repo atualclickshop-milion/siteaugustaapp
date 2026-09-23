@@ -81,6 +81,12 @@ export default function AdminModals(props) {
     setSongDuration,
     songLyricsText,
     setSongLyricsText,
+    songHighlight,
+    setSongHighlight,
+    songIsFutureLaunch,
+    setSongIsFutureLaunch,
+    songEnabled,
+    setSongEnabled,
     handleSaveSong,
     handleAudioFileUpload,
     detectAudioDuration,
@@ -425,6 +431,64 @@ export default function AdminModals(props) {
                   placeholder="Ex: Melodia suave para dormir tranqüilo"
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white text-sm"
                 />
+              </div>
+
+              {/* Opções de Status, Destaque e Lançamento Futuro */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Status & Visibilidade da Música
+                </span>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(songHighlight)}
+                    onChange={(e) => setSongHighlight(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 rounded text-amber-500 focus:ring-amber-400 border-slate-300"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-slate-800">
+                      ⭐ Definir como Canção Principal do App
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      Será a faixa em evidência no banner da tela inicial e no topo da aba de músicas.
+                    </span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(songIsFutureLaunch)}
+                    onChange={(e) => setSongIsFutureLaunch(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 rounded text-purple-600 focus:ring-purple-400 border-slate-300"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-slate-800">
+                      🚀 Marcar como Lançamento Futuro (Em Breve)
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      Exibe selo de estreia e prepara o público para o lançamento oficial.
+                    </span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={songEnabled !== false}
+                    onChange={(e) => setSongEnabled(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 rounded text-emerald-600 focus:ring-emerald-400 border-slate-300"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-slate-800">
+                      🟢 Música Ativa (Visível no aplicativo)
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      Se desmarcado, a faixa ficará oculta no catálogo para as mamães.
+                    </span>
+                  </div>
+                </label>
               </div>
 
               {/* Cover URL / File */}

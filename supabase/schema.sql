@@ -80,6 +80,9 @@ CREATE TABLE IF NOT EXISTS public.special_songs (
     tagline TEXT,
     description TEXT,
     highlight BOOLEAN DEFAULT true,
+    is_future_launch BOOLEAN DEFAULT false,
+    enabled BOOLEAN DEFAULT true,
+    display_order INTEGER DEFAULT 0,
     release_year TEXT DEFAULT '2026',
     lyrics TEXT[] DEFAULT '{}',
     streaming_links JSONB DEFAULT '{}'::jsonb,
@@ -87,6 +90,11 @@ CREATE TABLE IF NOT EXISTS public.special_songs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Garantir existência de novas colunas em instâncias existentes
+ALTER TABLE public.special_songs ADD COLUMN IF NOT EXISTS is_future_launch BOOLEAN DEFAULT false;
+ALTER TABLE public.special_songs ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT true;
+ALTER TABLE public.special_songs ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0;
 
 -- PRAYERS (Orações e Terços)
 CREATE TABLE IF NOT EXISTS public.prayers (
