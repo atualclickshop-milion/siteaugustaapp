@@ -11,7 +11,10 @@ import {
   saveStreamingPlatformsToDB,
   saveAnnouncementsToDB,
   deleteAnnouncementFromDB,
-  saveAudiobooksToDB
+  saveAudiobooksToDB,
+  deleteAudiobookFromDB,
+  deleteChapterFromDB,
+  deletePrayerFromDB
 } from '../lib/supabaseClient';
 import { idbSet } from '../utils/storageHelper';
 import { Check } from 'lucide-react';
@@ -33,6 +36,8 @@ export default function AdminPage({ onLogout }) {
   const { 
     audiobooks, 
     setAudiobooks, 
+    deleteAudiobook,
+    deleteChapter,
     songsList,
     setSongsList,
     specialSong, 
@@ -44,6 +49,7 @@ export default function AdminPage({ onLogout }) {
     toggleSongLaunchStatus,
     prayers,
     setPrayers,
+    deletePrayer,
     momentsList,
     setMomentsList,
     announcements,
@@ -273,13 +279,13 @@ export default function AdminPage({ onLogout }) {
       message: 'Tem certeza que deseja remover este audiobook e todos os seus capítulos?',
       confirmLabel: 'Sim, Excluir Audiobook',
       variant: 'danger',
-      onConfirm: () => {
-        const updated = audiobooks.filter(b => b.id !== id);
-        setAudiobooks(updated);
+      onConfirm: async () => {
+        await deleteAudiobook(id);
         if (selectedBookForChapters?.id === id) {
-          setSelectedBookForChapters(updated[0] || null);
+          const remaining = audiobooks.filter(b => b.id !== id);
+          setSelectedBookForChapters(remaining[0] || null);
         }
-        showFeedback('Audiobook removido.');
+        showFeedback('Audiobook removido com sucesso.');
       }
     });
   };
@@ -377,14 +383,14 @@ export default function AdminPage({ onLogout }) {
       message: 'Tem certeza que deseja excluir este capítulo deste audiobook?',
       confirmLabel: 'Sim, Remover',
       variant: 'danger',
-      onConfirm: () => {
+      onConfirm: async () => {
         const book = audiobooks.find(b => b.id === bookId);
-        if (!book) return;
-        const updatedChapters = book.chapters.filter(ch => ch.id !== chapterId);
-        const updatedBook = { ...book, chapters: updatedChapters };
-        setSelectedBookForChapters(updatedBook);
-        setAudiobooks(audiobooks.map(b => b.id === bookId ? updatedBook : b));
-        showFeedback('Capítulo removido.');
+        if (book) {
+          const updatedChapters = (book.chapters || []).filter(ch => ch.id !== chapterId);
+          setSelectedBookForChapters({ ...book, chapters: updatedChapters });
+        }
+        await deleteChapter(bookId, chapterId);
+        showFeedback('Capítulo removido com sucesso.');
       }
     });
   };
@@ -742,9 +748,9 @@ export default function AdminPage({ onLogout }) {
       message: 'Tem certeza que deseja remover esta oração da biblioteca?',
       confirmLabel: 'Sim, Excluir',
       variant: 'danger',
-      onConfirm: () => {
-        setPrayers(prayers.filter(p => p.id !== id));
-        showFeedback('Oração removida.');
+      onConfirm: async () => {
+        await deletePrayer(id);
+        showFeedback('Oração removida com sucesso.');
       }
     });
   };

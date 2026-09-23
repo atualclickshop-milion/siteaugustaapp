@@ -22,7 +22,8 @@ export async function fetchAudiobooksFromDB() {
       .select('*')
       .order('display_order', { ascending: true });
     
-    if (booksErr || !books || books.length === 0) return null;
+    if (booksErr || !books) return null;
+    if (books.length === 0) return [];
 
     const { data: chapters, error: chErr } = await supabase
       .from('chapters')
@@ -150,7 +151,8 @@ export async function fetchPrayersFromDB() {
       .select('*')
       .order('display_order', { ascending: true });
 
-    if (error || !data || data.length === 0) return null;
+    if (error || !data) return null;
+    if (data.length === 0) return [];
 
     return data.map(p => ({
       id: p.id,
@@ -412,6 +414,18 @@ export async function saveAppSettingToDB(key, value) {
 export async function savePrayersToDB(prayersList) {
   if (!Array.isArray(prayersList)) return;
   try {
+    // 1. Reconcile deleted prayers: delete from DB any prayers not in prayersList
+    const activeIds = prayersList.map(p => p.id).filter(Boolean);
+    const { data: existingPrayers } = await supabase.from('prayers').select('id');
+    if (existingPrayers && existingPrayers.length > 0) {
+      const toDelete = existingPrayers.filter(ep => !activeIds.includes(ep.id)).map(ep => ep.id);
+      if (toDelete.length > 0) {
+        await supabase.from('prayers').delete().in('id', toDelete);
+      }
+    }
+
+    if (prayersList.length === 0) return;
+
     const rows = [];
     for (let idx = 0; idx < prayersList.length; idx++) {
       const p = prayersList[idx];
@@ -443,6 +457,19 @@ export async function savePrayersToDB(prayersList) {
     if (error) console.warn('Supabase savePrayers error:', error);
   } catch (e) {
     console.warn('Supabase savePrayers error:', e);
+  }
+}
+
+export async function deletePrayerFromDB(id) {
+  if (!id) return;
+  try {
+    const { error } = await supabase
+      .from('prayers')
+      .delete()
+      .eq('id', id);
+    if (error) console.warn('Supabase deletePrayer error:', error);
+  } catch (e) {
+    console.warn('Supabase deletePrayer error:', e);
   }
 }
 
@@ -501,6 +528,17 @@ export async function deleteMomentFromDB(id) {
 export async function saveAudiobooksToDB(audiobooksList) {
   if (!Array.isArray(audiobooksList)) return;
   try {
+    // 1. Reconcile deleted audiobooks: delete any books (and their chapters) not in audiobooksList
+    const activeBookIds = audiobooksList.map(b => b.id).filter(Boolean);
+    const { data: existingBooks } = await supabase.from('audiobooks').select('id');
+    if (existingBooks && existingBooks.length > 0) {
+      const toDeleteBooks = existingBooks.filter(eb => !activeBookIds.includes(eb.id)).map(eb => eb.id);
+      if (toDeleteBooks.length > 0) {
+        await supabase.from('chapters').delete().in('audiobook_id', toDeleteBooks);
+        await supabase.from('audiobooks').delete().in('id', toDeleteBooks);
+      }
+    }
+
     for (let idx = 0; idx < audiobooksList.length; idx++) {
       const b = audiobooksList[idx];
 
@@ -529,6 +567,22 @@ export async function saveAudiobooksToDB(audiobooksList) {
       };
       const { error: bookErr } = await supabase.from('audiobooks').upsert(bookRow, { onConflict: 'id' });
       if (bookErr) console.warn('Supabase saveAudiobooks book error:', bookErr);
+
+      // 2. Reconcile deleted chapters for this audiobook
+      const currentChapterIds = (b.chapters || []).map(ch => ch.id).filter(Boolean);
+      const { data: existingChapters } = await supabase
+        .from('chapters')
+        .select('id')
+        .eq('audiobook_id', b.id);
+
+      if (existingChapters && existingChapters.length > 0) {
+        const toDeleteChapters = existingChapters
+          .filter(ech => !currentChapterIds.includes(ech.id))
+          .map(ech => ech.id);
+        if (toDeleteChapters.length > 0) {
+          await supabase.from('chapters').delete().in('id', toDeleteChapters);
+        }
+      }
 
       if (Array.isArray(b.chapters) && b.chapters.length > 0) {
         for (let chIdx = 0; chIdx < b.chapters.length; chIdx++) {
@@ -574,6 +628,33 @@ export async function saveAudiobooksToDB(audiobooksList) {
     }
   } catch (e) {
     console.warn('Supabase saveAudiobooks error:', e);
+  }
+}
+
+export async function deleteChapterFromDB(chapterId) {
+  if (!chapterId) return;
+  try {
+    const { error } = await supabase
+      .from('chapters')
+      .delete()
+      .eq('id', chapterId);
+    if (error) console.warn('Supabase deleteChapter error:', error);
+  } catch (e) {
+    console.warn('Supabase deleteChapter error:', e);
+  }
+}
+
+export async function deleteAudiobookFromDB(bookId) {
+  if (!bookId) return;
+  try {
+    await supabase.from('chapters').delete().eq('audiobook_id', bookId);
+    const { error } = await supabase
+      .from('audiobooks')
+      .delete()
+      .eq('id', bookId);
+    if (error) console.warn('Supabase deleteAudiobook error:', error);
+  } catch (e) {
+    console.warn('Supabase deleteAudiobook error:', e);
   }
 }
 

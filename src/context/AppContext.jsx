@@ -19,6 +19,8 @@ import {
   supabase,
   fetchAudiobooksFromDB,
   saveAudiobooksToDB,
+  deleteAudiobookFromDB,
+  deleteChapterFromDB,
   fetchSongsFromDB,
   fetchSpecialSongFromDB,
   saveSongsToDB,
@@ -29,6 +31,7 @@ import {
   saveStreamingPlatformsToDB,
   fetchPrayersFromDB,
   savePrayersToDB,
+  deletePrayerFromDB,
   fetchMomentsFromDB,
   saveMomentsToDB,
   fetchUserFavoritesFromDB,
@@ -320,6 +323,7 @@ export function AppProvider({ children }) {
             };
           });
           idbSet('ddp_audiobooks', merged);
+          try { localStorage.setItem('ddp_audiobooks', JSON.stringify(merged)); } catch {}
           return merged;
         });
       }
@@ -377,6 +381,7 @@ export function AppProvider({ children }) {
             };
           });
           idbSet('ddp_prayers', merged);
+          try { localStorage.setItem('ddp_prayers', JSON.stringify(merged)); } catch {}
           return merged;
         });
       }
@@ -1402,6 +1407,53 @@ export function AppProvider({ children }) {
     });
   };
 
+  const deletePrayer = async (prayerId) => {
+    if (!prayerId) return;
+    if (currentTrack?.id === prayerId) {
+      setIsPlaying(false);
+      setCurrentTrack(null);
+    }
+    setPrayers(prev => {
+      const updated = prev.filter(p => p.id !== prayerId);
+      idbSet('ddp_prayers', updated);
+      try { localStorage.setItem('ddp_prayers', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    await deletePrayerFromDB(prayerId);
+  };
+
+  const deleteChapter = async (bookId, chapterId) => {
+    if (!chapterId) return;
+    if (currentTrack?.id === chapterId) {
+      setIsPlaying(false);
+      setCurrentTrack(null);
+    }
+    setAudiobooks(prev => {
+      const updated = prev.map(b => {
+        if (b.id !== bookId) return b;
+        return {
+          ...b,
+          chapters: (b.chapters || []).filter(c => c.id !== chapterId)
+        };
+      });
+      idbSet('ddp_audiobooks', updated);
+      try { localStorage.setItem('ddp_audiobooks', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    await deleteChapterFromDB(chapterId);
+  };
+
+  const deleteAudiobook = async (bookId) => {
+    if (!bookId) return;
+    setAudiobooks(prev => {
+      const updated = prev.filter(b => b.id !== bookId);
+      idbSet('ddp_audiobooks', updated);
+      try { localStorage.setItem('ddp_audiobooks', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    await deleteAudiobookFromDB(bookId);
+  };
+
   const toggleSongFeatured = (songId) => {
     setSongsList(prev => {
       const updated = prev.map(s => ({
@@ -1725,6 +1777,8 @@ export function AppProvider({ children }) {
       // Data
       audiobooks,
       setAudiobooks,
+      deleteAudiobook,
+      deleteChapter,
       songsList,
       setSongsList,
       specialSong,
@@ -1736,6 +1790,7 @@ export function AppProvider({ children }) {
       toggleSongLaunchStatus,
       prayers,
       setPrayers,
+      deletePrayer,
       streamingPlatforms,
       setStreamingPlatforms,
       usersList,
